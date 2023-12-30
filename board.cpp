@@ -10,6 +10,7 @@
 using namespace std;
 
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
+enum TriPos {Top, BottomRight, BottomLeft};
 
 class SettlementJunction;
 
@@ -39,9 +40,11 @@ class RoadJunction {
 class SettlementJunction {
     int player = -1;
     int type = -1;
-    unordered_set<shared_ptr<RoadJunction>> roads;
+    vector<shared_ptr<RoadJunction>> roads;
 
     public:
+        SettlementJunction() : roads {vector<shared_ptr<RoadJunction>>(6, nullptr)} {}
+
         bool hasSettlement() {
             return player == -1;
         }
@@ -66,7 +69,7 @@ class SettlementJunction {
             return prevType == 0;
         }
 
-        unordered_set<shared_ptr<RoadJunction>>& getRoads() {
+        vector<shared_ptr<RoadJunction>>& getRoads() {
             return roads;
         }
 };
@@ -119,22 +122,31 @@ class Board {
             return tile.getSettlements()[pos];
         }
 
-        void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2) {
-            unordered_set<shared_ptr<RoadJunction>>& roads1 = s1->getRoads();
-            bool hasRoad = false;
-            for (const auto& road : roads1) {
-                auto matchedSettlements = road->getSettlements();
-                if ((matchedSettlements[0] == s1 && matchedSettlements[1] == s2) || (matchedSettlements[1] == s1 && matchedSettlements[0] == s2)) {
-                    hasRoad = true;
-                    break;
-                }
+        HexPos getOppositePos(HexPos pos) {
+            switch (pos) {
+                case HexPos::Top:
+                    return HexPos::Bottom;
+                case HexPos::TopRight:
+                    return HexPos::BottomLeft;
+                case HexPos::TopLeft:
+                    return HexPos::BottomRight;
+                case HexPos::Bottom:
+                    return HexPos::Top;
+                case HexPos::BottomRight:
+                    return HexPos::TopLeft;
+                default:
+                    return HexPos::TopRight; 
             }
+        }
 
-            if (!hasRoad) {
+        void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2, HexPos pos) {
+            HexPos oppositePos = getOppositePos(pos);
+            vector<shared_ptr<RoadJunction>>& roads1 = s1->getRoads();
+            if (roads1[pos] != nullptr) {
                 shared_ptr<RoadJunction> newRoad = make_shared<RoadJunction>(s1, s2);
-                unordered_set<shared_ptr<RoadJunction>>& roads2 = s2->getRoads();
-                roads1.insert(shared_ptr<RoadJunction>(newRoad));
-                roads2.insert(shared_ptr<RoadJunction>(newRoad));
+                vector<shared_ptr<RoadJunction>>& roads2 = s2->getRoads();
+                roads1[pos] = shared_ptr<RoadJunction>(newRoad);
+                roads2[oppositePos] = shared_ptr<RoadJunction>(newRoad);
             }
         }
     
@@ -238,11 +250,13 @@ class Board {
                         }
                     }
                     
-                    // Generate all Road Spots
-                    for (int i = 0; i < 6; i++) {
-                        int next = i + 1 == 6 ? 0 : i + 1;
-                        makeRoad(currSettlements[i], currSettlements[next]);
-                    }
+                    // Generate all Road Spots (1,2,1->2)
+                    makeRoad(currSettlements[0], currSettlements[1], HexPos::BottomRight);
+                    makeRoad(currSettlements[1], currSettlements[2], HexPos::Bottom);
+                    makeRoad(currSettlements[2], currSettlements[3], HexPos::BottomLeft);
+                    makeRoad(currSettlements[3], currSettlements[4], HexPos::TopLeft);
+                    makeRoad(currSettlements[4], currSettlements[5], HexPos::Top);
+                    makeRoad(currSettlements[5], currSettlements[0], HexPos::TopRight);
                 }
             }
         }
