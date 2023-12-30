@@ -1,14 +1,13 @@
 #include <string>
 #include <list>
 #include <map>
-#include <stack>
 #include <algorithm>
 #include <random>
 #include <unordered_set>
+#include "defs.hpp"
 
 using namespace std;
 
-enum class Resource {Brick, Wood, Sheep, Wheat, Ore, Sand};
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
 
 class Tile {
