@@ -13,20 +13,7 @@ using namespace std;
 
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
 
-class Tile {
-    Resource resource;
-    int roll;
-    vector<shared_ptr<SettlementJunction>> settlements;
-    bool hasRobber;
-
-    public:
-        Tile(Resource resourceArg, int rollArg);
-        Resource getResource();
-        int getRoll();
-        bool removeRobber();
-        bool placeRobber();
-        vector<shared_ptr<SettlementJunction>>& getSettlements();
-};
+class SettlementJunction;
 
 class RoadJunction {
     int player;
@@ -52,6 +39,21 @@ class SettlementJunction {
         unordered_set<shared_ptr<RoadJunction>>& getRoads();
 };
 
+class Tile {
+    Resource resource;
+    int roll;
+    vector<shared_ptr<SettlementJunction>> settlements;
+    bool hasRobber;
+
+    public:
+        Tile(Resource resourceArg, int rollArg);
+        Resource getResource();
+        int getRoll();
+        bool removeRobber();
+        bool placeRobber();
+        vector<shared_ptr<SettlementJunction>>& getSettlements();
+};
+
 class Board {
     vector<vector<Tile>> tileGrid;
     map<int, list<Tile*>> rollTileLists;
@@ -64,6 +66,7 @@ class Board {
         void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2);
         Board();
         int getLongestRoadUser();
+        void printBoardState();
 };
 
 #endif

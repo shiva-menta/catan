@@ -9,27 +9,27 @@ class DevelopmentCard {
         virtual void use(Game& game);
 };
 
-class KnightCard : private DevelopmentCard {
+class KnightCard : public DevelopmentCard {
     public:
         void use(Game& game);
 };
 
-class MonopolyCard : private DevelopmentCard {
+class MonopolyCard : public DevelopmentCard {
     public:
         void use(Game& game);
 };
 
-class RoadBuildingCard : private DevelopmentCard {
+class RoadBuildingCard : public DevelopmentCard {
     public:
         void use(Game& game);
 };
 
-class YearOfPlentyCard : private DevelopmentCard {
+class YearOfPlentyCard : public DevelopmentCard {
     public:
         void use(Game& game);
 };
 
-class VictoryPointCard : private DevelopmentCard {
+class VictoryPointCard : public DevelopmentCard {
     public:
         void use(Game& game);
 };

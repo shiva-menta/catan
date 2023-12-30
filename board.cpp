@@ -4,46 +4,14 @@
 #include <algorithm>
 #include <random>
 #include <unordered_set>
+#include <iostream>
 #include "defs.hpp"
 
 using namespace std;
 
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
 
-class Tile {
-    Resource resource;
-    int roll;
-
-    vector<shared_ptr<SettlementJunction>> settlements;
-    bool hasRobber;
-
-    public:
-        Tile (Resource resourceArg, int rollArg) : resource {resourceArg}, roll {rollArg}, settlements {vector<shared_ptr<SettlementJunction>>(6, nullptr)}, hasRobber {false} {}
-        
-        Resource getResource() {
-            return resource;
-        }
-
-        int getRoll() {
-            return roll;
-        }
-
-        bool removeRobber() {
-            bool tempHasRobber {hasRobber};
-            hasRobber = false;
-            return tempHasRobber;
-        }
-
-        bool placeRobber() {
-            bool tempHasRobber {hasRobber};
-            hasRobber = true;
-            return tempHasRobber;
-        }
-
-        vector<shared_ptr<SettlementJunction>>& getSettlements() {
-            return settlements;
-        }
-};
+class SettlementJunction;
 
 class RoadJunction {
     int player = -1;
@@ -103,6 +71,41 @@ class SettlementJunction {
         }
 };
 
+class Tile {
+    Resource resource;
+    int roll;
+
+    vector<shared_ptr<SettlementJunction>> settlements;
+    bool hasRobber;
+
+    public:
+        Tile (Resource resourceArg, int rollArg) : resource {resourceArg}, roll {rollArg}, settlements {vector<shared_ptr<SettlementJunction>>(6, nullptr)}, hasRobber {false} {}
+        
+        Resource getResource() {
+            return resource;
+        }
+
+        int getRoll() {
+            return roll;
+        }
+
+        bool removeRobber() {
+            bool tempHasRobber {hasRobber};
+            hasRobber = false;
+            return tempHasRobber;
+        }
+
+        bool placeRobber() {
+            bool tempHasRobber {hasRobber};
+            hasRobber = true;
+            return tempHasRobber;
+        }
+
+        vector<shared_ptr<SettlementJunction>>& getSettlements() {
+            return settlements;
+        }
+};
+
 class Board {
     vector<vector<Tile>> tileGrid;
     map<int, list<Tile*>> rollTileLists;
@@ -135,7 +138,7 @@ class Board {
             }
         }
     
-        Board() : tileGrid {vector<vector<Tile>>(rowLengths.size())}  {
+        Board() : tileGrid {vector<vector<Tile>>(5)}  {
             // Initialize Tile Value Stacks.
             map<Resource, int> resourceTiles = {
                 {Resource::Brick, 3},
@@ -152,11 +155,12 @@ class Board {
                 }
             }
             vector<int> rollStack;
-            for (int i = 1; i < 13; i++) {
+            for (int i = 2; i < 13; i++) {
+                if (i == 7) {
+                    continue;
+                }
                 if (i != 2 && i != 12) {
                     rollStack.push_back(i);
-                } else {
-                    continue;
                 }
                 rollStack.push_back(i);
             }
@@ -165,15 +169,20 @@ class Board {
             
 
             // Tile / TileGrid Generation.
-            if (resourceStack.size() != numTiles || rollStack.size() != numTiles) {
+            if (resourceStack.size() != numTiles || rollStack.size() != numTiles - 1) {
+                cout << "Resource Stack Size: " << resourceStack.size() << "\n";
+                cout << "Roll Stack Size: " << rollStack.size() << "\n";
                 throw length_error("Incorrect Size Stacks");
             }
             size_t currentRow = 0;
             while (resourceStack.size() != 0 && rollStack.size() != 0 && currentRow < rowLengths.size()) {
                 for (int i = 0; i < rowLengths[currentRow] && resourceStack.size() != 0 && rollStack.size() != 0; i++) {
                     Resource lastResource = resourceStack.back();
-                    int lastRoll = rollStack.back();
+                    if (lastResource == Resource::Sand) {
+                        continue;
+                    }
 
+                    int lastRoll = rollStack.back();
                     resourceStack.pop_back();
                     rollStack.pop_back();
 
@@ -181,8 +190,6 @@ class Board {
                     Tile& newTile = tileGrid[currentRow].back();
                     if (rollTileLists.count(lastRoll)) {
                         rollTileLists[lastRoll].push_back(&newTile);
-                    } else {
-                        rollTileLists[lastRoll] = list<Tile*> {&newTile};
                     }
                 }
                 currentRow++;
@@ -243,4 +250,13 @@ class Board {
         int getLongestRoadUser() {
             return -1;
         }
+
+        void printBoardState() {
+            cout << "Hello world.";
+        }
 };
+
+int main() {
+    Board board = Board();
+    board.printBoardState();
+}
