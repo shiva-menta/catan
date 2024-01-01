@@ -22,16 +22,16 @@ class RoadJunction {
     public:
         RoadJunction(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2, int hex) : settlements {{s1, s2}}, display {hex} {}
 
-        bool hasRoad() {
-            return player != -1;
-        }
-
         int getPlayer() {
             return player;
         }
 
         int getDisplay() {
             return display;
+        }
+
+        bool hasRoad() {
+            return player != -1;
         }
 
         bool placeRoad(int playerArg) {
@@ -96,7 +96,6 @@ class SettlementJunction {
 class Tile {
     Resource resource;
     int roll;
-
     vector<shared_ptr<SettlementJunction>> settlements;
     bool hasRobber;
 
@@ -449,7 +448,7 @@ class Board {
             }
             return false;
         }
-        bool upgradeTown(int row, int col, int player) {
+        bool upgradeSettlement(int row, int col, int player) {
             if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
                 SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
                 return settlement.upgradeSettlement(player);
