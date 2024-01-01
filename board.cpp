@@ -176,6 +176,15 @@ class Board {
     const vector<int> rowLengths {3,4,5,4,3};
 
     public:
+        string formatNumber(int num) {
+            string numStr = to_string(num);
+            if (numStr.size() == 2) {
+                return " " + numStr;
+            } else {
+                return " " + numStr + " ";
+            }
+        }
+
         shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos) {
             Tile& tile = tileGrid[row][col];
             return tile.getSettlements()[pos];
@@ -385,8 +394,16 @@ class Board {
         }
 
         void printBoardState() {
+            for (int col = 0; col < 22; col++) {
+                cout << formatNumber(col) << " ";
+            }
+            cout << endl;
+
             for (int row = 0; row < pieceGrid.size(); row++) {
-                // find first valid col
+                // Print Row Number
+                cout << formatNumber(row + 1) << " ";
+
+                // Print Row contents
                 int rowStart = 0;
                 for (int col = 0; col < pieceGrid[row].size(); col++) {
                     if (!holds_alternative<monostate>(pieceGrid[row][col])) {
