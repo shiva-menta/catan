@@ -37,8 +37,9 @@ class RoadJunction {
         bool placeRoad(int playerArg) {
             if (player == -1) {
                 player = playerArg;
+                return true;
             }
-            return player != -1;
+            return false;
         }
 
         vector<shared_ptr<SettlementJunction>>& getSettlements() {
@@ -70,16 +71,17 @@ class SettlementJunction {
             if (player == -1) {
                 player = playerArg;
                 type = 0;
+                return true;
             }
-            return player == -1;
+            return false;
         }
 
         bool upgradeSettlement(int playerArg) {
-            int prevType {type};
-            if (prevType == 0) {
+            if (player == playerArg && type == 0) {
                 type = 1;
+                return true;
             }
-            return prevType == 0;
+            return false;
         }
 
         vector<shared_ptr<RoadJunction>>& getRoads() {
@@ -431,6 +433,28 @@ class Board {
                 cout << endl;
             }
             return;
+        }
+
+        bool placeRoad(int row, int col, int player) {
+            if (holds_alternative<RoadJunction*>(pieceGrid[row - 1][col - 1])) {
+                RoadJunction& road = *get<RoadJunction*>(pieceGrid[row - 1][col - 1]);
+                return road.placeRoad(player);
+            }
+            return false;
+        }
+        bool placeSettlement(int row, int col, int player) {
+            if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
+                SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
+                return settlement.placeSettlement(player);
+            }
+            return false;
+        }
+        bool upgradeTown(int row, int col, int player) {
+            if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
+                SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
+                return settlement.upgradeSettlement(player);
+            }
+            return false;
         }
 };
 
