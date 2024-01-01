@@ -12,7 +12,6 @@
 using namespace std;
 
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
-enum TriPos {Top, BottomRight, BottomLeft};
 
 class SettlementJunction;
 

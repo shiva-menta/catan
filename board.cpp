@@ -10,7 +10,6 @@
 using namespace std;
 
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
-enum TriPos {Top, BottomRight, BottomLeft};
 
 class SettlementJunction;
 
@@ -119,6 +118,10 @@ class Board {
     public:
         shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos) {
             Tile& tile = tileGrid[row][col];
+            // for (int i = 0; i < 6; i++) {
+            //     bool hasSettlement = matchingSettlements[i] != nullptr;
+            //     cout << i << " " << hasSettlement << endl;
+            // }
             return tile.getSettlements()[pos];
         }
 
@@ -142,7 +145,7 @@ class Board {
         void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2, HexPos pos) {
             HexPos oppositePos = getOppositePos(pos);
             vector<shared_ptr<RoadJunction>>& roads1 = s1->getRoads();
-            if (roads1[pos] != nullptr) {
+            if (roads1[pos] == nullptr) {
                 shared_ptr<RoadJunction> newRoad = make_shared<RoadJunction>(s1, s2);
                 vector<shared_ptr<RoadJunction>>& roads2 = s2->getRoads();
                 roads1[pos] = shared_ptr<RoadJunction>(newRoad);
@@ -186,46 +189,54 @@ class Board {
                 cout << "Roll Stack Size: " << rollStack.size() << "\n";
                 throw length_error("Incorrect Size Stacks");
             }
-            size_t currentRow = 0;
+            int currentRow = 0;
             while (resourceStack.size() != 0 && rollStack.size() != 0 && currentRow < rowLengths.size()) {
                 for (int i = 0; i < rowLengths[currentRow] && resourceStack.size() != 0 && rollStack.size() != 0; i++) {
                     Resource lastResource = resourceStack.back();
-                    if (lastResource == Resource::Sand) {
-                        continue;
-                    }
-
                     int lastRoll = rollStack.back();
-                    resourceStack.pop_back();
-                    rollStack.pop_back();
 
-                    tileGrid[currentRow].push_back(Tile {lastResource, lastRoll});
-                    Tile& newTile = tileGrid[currentRow].back();
-                    if (rollTileLists.count(lastRoll)) {
-                        rollTileLists[lastRoll].push_back(&newTile);
+                    resourceStack.pop_back();
+                    if (lastResource == Resource::Sand) {
+                        tileGrid[currentRow].push_back(Tile {lastResource, -1});
+                    } else {
+                        rollStack.pop_back();
+                        tileGrid[currentRow].push_back(Tile {lastResource, lastRoll});
+                        Tile& newTile = tileGrid[currentRow].back();
+                        if (rollTileLists.count(lastRoll)) {
+                            rollTileLists[lastRoll].push_back(&newTile);
+                        }
                     }
                 }
                 currentRow++;
             }
 
-
             // Junction & Road Generation
             for (int row = 0; row < rowLengths.size(); row++) {
                 for (int col = 0; col < rowLengths[row]; col++) {
                     Tile& currTile = tileGrid[row][col];
-                    auto currSettlements = currTile.getSettlements();
+                    vector<shared_ptr<SettlementJunction>>& currSettlements = currTile.getSettlements();
+                    // Debuggging Line.
+                    // cout << "(" << row << "," << col << ")" << endl;
+                    // cout << "has type: " << (int) currTile.getResource() << endl;
+                    // for (int i = 0; i < 6; i++) {
+                    //     cout << "address: " << currSettlements[i].get() << endl;
+                    //     cout << "pos: " << i << " " << (currSettlements[i] == nullptr) << endl;
+                    // }
 
                     // Generate all Junction Settlements
-                    // Top Settlement
-                    if (row > 0) {
+                    // Top Settlement (logic is incorrect)
+                    if (row > 0 and col == rowLengths[row - 1]) {
+                        currSettlements[HexPos::Top] = getSettlementReference(row - 1, col - 1, HexPos::BottomRight);
+                    } else if (row > 0) {
                         int shift = rowLengths[row] > rowLengths[row - 1] ? 0 : 1;
-                        currSettlements[HexPos::Top] = shared_ptr<SettlementJunction> {getSettlementReference(row - 1, col + shift, HexPos::BottomLeft)};
+                        currSettlements[HexPos::Top] = getSettlementReference(row - 1, col + shift, HexPos::BottomLeft);
                     } else {
                         currSettlements[HexPos::Top] = make_shared<SettlementJunction>();
                     }
-                    // TopRight Settlement
-                    if (row > 0) {
+                    // TopRight Settlement (logic is incorrect)
+                    if (row > 0 && col != rowLengths[row - 1]) {
                         int shift = rowLengths[row] > rowLengths[row - 1] ? 0 : 1;
-                        currSettlements[HexPos::TopRight] = shared_ptr<SettlementJunction> {getSettlementReference(row - 1, col + shift, HexPos::Bottom)};
+                        currSettlements[HexPos::TopRight] = getSettlementReference(row - 1, col + shift, HexPos::Bottom);
                     } else {
                         currSettlements[HexPos::TopRight] = make_shared<SettlementJunction>();
                     }
@@ -233,24 +244,24 @@ class Board {
                     currSettlements[HexPos::BottomRight] = make_shared<SettlementJunction>();
                     // Bottom Settlement
                     currSettlements[HexPos::Bottom] = make_shared<SettlementJunction>();
-                    // BottomLeft Settlement (only will be shared with the left tile)
+                    // BottomLeft Settlement
                     if (col > 0) {
-                        currSettlements[HexPos::BottomLeft] = shared_ptr<SettlementJunction> {getSettlementReference(row, col - 1, HexPos::BottomRight)};
+                        currSettlements[HexPos::BottomLeft] = getSettlementReference(row, col - 1, HexPos::BottomRight);
                     } else {
                         currSettlements[HexPos::BottomLeft] = make_shared<SettlementJunction>();
                     }
                     // TopLeft Settlement
                     if (col > 0) {
-                        currSettlements[HexPos::TopLeft] = shared_ptr<SettlementJunction> {getSettlementReference(row, col - 1, HexPos::TopRight)};
+                        currSettlements[HexPos::TopLeft] = getSettlementReference(row, col - 1, HexPos::TopRight);
                     } else {
                         if (row == 0 || rowLengths[row] > rowLengths[row - 1]) {
                             currSettlements[HexPos::TopLeft] = make_shared<SettlementJunction>();
                         } else {
-                            currSettlements[HexPos::TopLeft] = shared_ptr<SettlementJunction> {getSettlementReference(row - 1, col, HexPos::Bottom)};
+                            currSettlements[HexPos::TopLeft] = getSettlementReference(row - 1, col, HexPos::Bottom);
                         }
                     }
                     
-                    // Generate all Road Spots (1,2,1->2)
+                    // Generate all Road Spots
                     makeRoad(currSettlements[0], currSettlements[1], HexPos::BottomRight);
                     makeRoad(currSettlements[1], currSettlements[2], HexPos::Bottom);
                     makeRoad(currSettlements[2], currSettlements[3], HexPos::BottomLeft);
@@ -266,6 +277,7 @@ class Board {
         }
 
         void printBoardState() {
+            // Maybe have a board state grid composed of references that is a union type.
             cout << "Hello world.";
         }
 };

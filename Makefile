@@ -8,13 +8,13 @@ clean:
 	rm *.o board
 
 defs.o: defs.cpp defs.hpp
-	g++ -c $(std) defs.cpp
+	clang++ -c -g -O0 $(std) defs.cpp
 
 board.o: board.cpp board.hpp
-	g++ -c $(std) board.cpp
+	clang++ -c -g -O0 $(std) board.cpp
 
 board: $(objects)
-	g++ -o board $(objects)
+	clang++ -g -o board $(objects)
 
 .PHONY: run
 run: 
