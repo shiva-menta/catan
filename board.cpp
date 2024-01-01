@@ -130,17 +130,15 @@ class Tile {
         }
 };
 
-union GridPiece {
-    Tile* tile;
-    SettlementJunction* settlement;
-    RoadJunction* road;
-};
-
 // Custom To Strings
 ostream& operator<<(ostream& ostrm, Tile &tile) {
     string roll = to_string(tile.getRoll());
-    string padding = roll.size() == 2 ? "" : " ";
-    return ostrm << padding << roll << getAbbrev(tile.getResource());
+    if (roll == "-1") {
+        return ostrm << " " << getAbbrev(tile.getResource()) << " ";
+    } else {
+        string padding = roll.size() == 2 ? "" : " ";
+        return ostrm << padding << roll << getAbbrev(tile.getResource());
+    }
 }
 ostream& operator<<(ostream& ostrm, SettlementJunction &settlement) {
     string rep;
@@ -159,7 +157,7 @@ ostream& operator<<(ostream& ostrm, SettlementJunction &settlement) {
             rep = "o";
             break;
     }
-    return ostrm << padding << player << type << " ";
+    return ostrm << padding << player << rep << " ";
 }
 ostream& operator<<(ostream& ostrm, RoadJunction &road) {
     int playerArg = road.getPlayer();
@@ -172,37 +170,12 @@ ostream& operator<<(ostream& ostrm, RoadJunction &road) {
 class Board {
     vector<vector<Tile>> tileGrid;
     map<int, list<Tile*>> rollTileLists;
-    vector<vector<GridPiece>> pieceGrid;
+    vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
     unsigned seed = 0;
     int numTiles {19};
     const vector<int> rowLengths {3,4,5,4,3};
 
     public:
-        void makeAssignGridPiece(int row, int col, Tile* tilePtr, SettlementJunction* settlementPtr, RoadJunction* roadPtr) {
-            GridPiece piece;
-            if (tilePtr != nullptr) {
-                piece.tile = tilePtr;
-            } else if (settlementPtr != nullptr) {
-                piece.settlement = settlementPtr;
-            } else {
-                piece.road = roadPtr;
-            }
-            cout << "(" << row << ", " << col << ")" << endl;
-            pieceGrid[row][col] = piece;
-        }
-
-        void makeAssignTilePiece(int row, int col, Tile* tilePtr) {
-            makeAssignGridPiece(row, col, tilePtr, nullptr, nullptr);
-        }
-
-        void makeAssignSettlementPiece(int row, int col, SettlementJunction* settlementPtr) {
-            makeAssignGridPiece(row, col, nullptr, settlementPtr, nullptr);
-        }
-
-        void makeAssignRoadPiece(int row, int col, RoadJunction* roadPtr) {
-            makeAssignGridPiece(row, col, nullptr, nullptr, roadPtr);
-        }
-
         shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos) {
             Tile& tile = tileGrid[row][col];
             return tile.getSettlements()[pos];
@@ -225,7 +198,7 @@ class Board {
             }
         }
     
-        Board() : tileGrid {vector<vector<Tile>>(5)}, pieceGrid {vector<vector<GridPiece>>(11, vector<GridPiece>(21))} {
+        Board() : tileGrid {vector<vector<Tile>>(5)}, pieceGrid {vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>>(11, vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>(21, monostate{}))} {
             // Initialize Tile Value Stacks.
             map<Resource, int> resourceTiles = {
                 {Resource::Brick, 3},
@@ -287,13 +260,6 @@ class Board {
                 for (int col = 0; col < rowLengths[row]; col++) {
                     Tile& currTile = tileGrid[row][col];
                     vector<shared_ptr<SettlementJunction>>& currSettlements = currTile.getSettlements();
-                    // Debuggging Line.
-                    // cout << "(" << row << "," << col << ")" << endl;
-                    // cout << "has type: " << (int) currTile.getResource() << endl;
-                    // for (int i = 0; i < 6; i++) {
-                    //     cout << "address: " << currSettlements[i].get() << endl;
-                    //     cout << "pos: " << i << " " << (currSettlements[i] == nullptr) << endl;
-                    // }
 
                     // Generate all Junction Settlements
                     // Top Settlement
@@ -344,12 +310,6 @@ class Board {
             }
 
             // Create Pointer Grid Representation (11x21)
-            // Initialize Grid w/ Nullptrs
-            for (int row = 0; pieceGrid.size(); row++) {
-                for (int col = 0; pieceGrid[row].size(); col++) {
-                    pieceGrid[row][col] = GridPiece {nullptr};
-                }
-            }
             // Create Grid Pointers
             int gridRow = 0;
             int gridCol = 0;
@@ -361,59 +321,59 @@ class Board {
                     for (int col = 0; col < rowLengths[row]; col++) {
                         Tile& currTile = tileGrid[row][col];
                         SettlementJunction* tl = currTile.getSettlement(HexPos::TopLeft);
-                        makeAssignSettlementPiece(gridRow, gridCol, tl);
+                        pieceGrid[gridRow][gridCol] = tl;
                         gridCol++;
                         
-                        makeAssignRoadPiece(gridRow, gridCol, tl->getRoad(HexPos::TopRight));
+                        pieceGrid[gridRow][gridCol] = tl->getRoad(HexPos::TopRight);
                         gridCol++;
 
                         SettlementJunction* t = currTile.getSettlement(HexPos::Top);
-                        makeAssignSettlementPiece(gridRow, gridCol, t);
+                        pieceGrid[gridRow][gridCol] = t;
                         gridCol++;
 
-                        makeAssignRoadPiece(gridRow, gridCol, t->getRoad(HexPos::BottomRight));
+                        pieceGrid[gridRow][gridCol] = t->getRoad(HexPos::BottomRight);
                         gridCol++;
                     }
                     Tile& currTile = tileGrid[row][rowLengths[row] - 1];
                     SettlementJunction* tr = currTile.getSettlement(HexPos::TopRight);
-                    makeAssignSettlementPiece(gridRow, gridCol, tr);
+                    pieceGrid[gridRow][gridCol] = tr;
                     gridRow++;
                     gridCol = rowStart;
                 }
                 for (int col = 0; col < rowLengths[row]; col++) {
                     Tile& currTile = tileGrid[row][col];
                     SettlementJunction* bl = currTile.getSettlement(HexPos::BottomLeft);
-                    makeAssignRoadPiece(gridRow, gridCol, bl->getRoad(HexPos::Top));
+                    pieceGrid[gridRow][gridCol] = bl->getRoad(HexPos::Top);
                     gridCol+=2;
 
-                    makeAssignTilePiece(gridRow, gridCol, &currTile);
+                    pieceGrid[gridRow][gridCol] = &currTile;
                     gridCol+=2;
                 }
                 Tile& currTile = tileGrid[row][rowLengths[row] - 1];
                 SettlementJunction* br = currTile.getSettlement(HexPos::BottomRight);
-                makeAssignRoadPiece(gridRow, gridCol, br->getRoad(HexPos::Top));
+                pieceGrid[gridRow][gridCol] = br->getRoad(HexPos::Top);
                 gridRow++;
                 gridCol = rowStart;
                 if (row >= 2) {
                     for (int col = 0; col < rowLengths[row]; col++) {
                         Tile& currTile = tileGrid[row][col];
                         SettlementJunction* bl = currTile.getSettlement(HexPos::BottomLeft);
-                        makeAssignSettlementPiece(gridRow, gridCol, bl);
+                        pieceGrid[gridRow][gridCol] = bl;
                         gridCol++;
 
-                        makeAssignRoadPiece(gridRow, gridCol, bl->getRoad(HexPos::BottomRight));
+                        pieceGrid[gridRow][gridCol] = bl->getRoad(HexPos::BottomRight);
                         gridCol++;
 
                         SettlementJunction* b = currTile.getSettlement(HexPos::Bottom);
-                        makeAssignSettlementPiece(gridRow, gridCol, b);
+                        pieceGrid[gridRow][gridCol] = b;
                         gridCol++;
 
-                        makeAssignRoadPiece(gridRow, gridCol, b->getRoad(HexPos::TopRight));
+                        pieceGrid[gridRow][gridCol] = b->getRoad(HexPos::TopRight);
                         gridCol++;
                     }
                     Tile& currTile = tileGrid[row][rowLengths[row] - 1];
                     SettlementJunction* br = currTile.getSettlement(HexPos::BottomRight);
-                    makeAssignSettlementPiece(gridRow, gridCol, br);
+                    pieceGrid[gridRow][gridCol] = br;
                     gridRow++;
                 }
                 gridCol = 0;
@@ -425,17 +385,34 @@ class Board {
         }
 
         void printBoardState() {
-            // for (int row = 0; row < pieceGrid.size(); row++) {
-            //     for (int col = 0; col < pieceGrid[row].size(); col++) {
-            //         if (pieceGrid[row][col].tile == nullptr) {
-            //             cout << "~~~";
-            //         } else {
-            //             cout <<
-            //         }
-            //         cout << " ";
-            //     }
-            //     cout << endl;
-            // }
+            for (int row = 0; row < pieceGrid.size(); row++) {
+                // find first valid col
+                int rowStart = 0;
+                for (int col = 0; col < pieceGrid[row].size(); col++) {
+                    if (!holds_alternative<monostate>(pieceGrid[row][col])) {
+                        break;
+                    }
+                    rowStart++;
+                }
+                int rowEnd = 20 - rowStart;
+                for (int col = 0; col < pieceGrid[row].size(); col++) {
+                    if (holds_alternative<monostate>(pieceGrid[row][col])) {
+                        if (rowStart <= col && col <= rowEnd) {
+                            cout << "   ";
+                        } else {
+                            cout << "~~~";
+                        }
+                    } else if (holds_alternative<Tile*>(pieceGrid[row][col])) {
+                        cout << *get<Tile*>(pieceGrid[row][col]);
+                    } else if (holds_alternative<SettlementJunction*>(pieceGrid[row][col])) {
+                        cout << *get<SettlementJunction*>(pieceGrid[row][col]);
+                    } else {
+                        cout << *get<RoadJunction*>(pieceGrid[row][col]);
+                    }
+                    cout << " ";
+                }
+                cout << endl;
+            }
             return;
         }
 };
