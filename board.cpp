@@ -212,7 +212,7 @@ class Board {
             // Initialize Tile Value Stacks.
             map<Resource, int> resourceTiles = {
                 {Resource::Brick, 3},
-                {Resource::Wood, 4},
+                {Resource::Tree, 4},
                 {Resource::Sheep, 4},
                 {Resource::Wheat, 4},
                 {Resource::Ore, 3},
@@ -456,8 +456,3 @@ class Board {
             return false;
         }
 };
-
-int main() {
-    Board board = Board();
-    board.printBoardState();
-}

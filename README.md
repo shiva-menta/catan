@@ -8,39 +8,26 @@ LAN-supported C++-implementation of Catan.
 - Development Cards: The game state should have a deck of development cards based on a pre-determined ordering of cards, initiate a random ordering and a stack of development cards to be picked from. Development cards should have some base implemented logic across all cards, and then an action function that allows them to modify the game state as needed.
 
 ## Grid Representation
-For ease of use, we wanted to make this grid presentable on a 15 by 25 grid so it is easy to print out.
+For ease of use, I have provided a compact grid in which users can reference specific positions they wish to modify.
 
-Sea: ~
-Settlement: o, T, C
-Roads: / | \
-Tile: (R)##[Br, Or, Wh, Wo, Sh]
-
-1: 3 settlements    ooo
-2: 6 roads  /\/\/\
-3: 4 settlements    oooo
-4: 4 roads, 3 tiles | ##Ti | ##Ti | ##Ti |
-5: 4 settlements oooo
-6: 8 roads /\/\/\/\
-7: 5 settlements ooooo
-8: 5 roads, 4 tiles
-9: 5 settlements
-10: 10 roads
-11: 6 settlements
-12: 6 roads, 5 tiles
-13: 6 settlements
-14: 10 roads
-15: 5 settelements
-16: 5 roads, 4 tiles
-17: 5 settlements
-18: 8 roads
-19: 4 settlements
-20: 4 roads, 3 tiles
-21: 4 settlements
-22: 6 roads
-23: 3 settlements
+## Gameplay Process
+### Pre-Game
+- All users join the game. This entails keeping a counter of total number of players and returning an integer corresponding to each player. Each player should be given building resources (15 Roads, 5 Towns, 4 Cities).
+- Initialize board, full stack of resource cards and development cards.
+- Initialize robber on desert tile.
+### Game
+- First Turn: Randomize an order for players to select their initial settlements and connecting roads, and then invert that ordering for the second placement.
+- Subsequent Turns: each new turn should be accompanied with two dice rolls that display on screen. Users that have settlements on corresponding locations should receive those resources. After resource acquisition, users should be able to place new objects under the following conditions.
+- Roads can be placed if a user has one brick and one tree, is adjacent to another road of theirs, and isn't already occupied. Each road placement should lead to a recalculation of longestRoad (extra).
+- Towns can be placed if a user has one sheep, one wheat, one brick, one tree, is connected to at least one road of theirs, isn't roadwise adjacent to another settlement, and isn't already taken. (+1)
+- Cities can be placed if a user has two wheat, three stone and already owns the town. (+1)
+- Every turn, the overall score will be checked against the WIN threshold, and the game will terminate operation (and stop accepting inputs) if reached by a certain player.
+### Post-Game
+- Post game will include termination of the program due to a WIN threshold being reached.
 
 ## Development Process
 - V1: Board Creation
-- V2: Game State and Player Creation
-- V3: Development Card Creation
-- V4: LAN-Enabled Play Creation
+- V2: Game State and Player Creation / Development Card Creation
+- V3: Enabling Trades
+- V4: Adding Trade Ports
+- V5: LAN-Enabled Play Creation

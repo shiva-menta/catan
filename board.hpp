@@ -83,10 +83,9 @@ class Board {
         int getLongestRoadUser();
         void printBoardState();
         bool placeRoad(int row, int col, int player);
-        bool placeSettlement(int row, int col, int player);
+        // need to account for settlement proximity, road connection (assume this is non beginning turn)
+        bool placeSettlement(int row, int col, int player, bool isInitialTurn);
         bool upgradeSettlement(int row, int col, int player);
 };
-
-main();
 
 #endif

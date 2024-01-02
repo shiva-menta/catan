@@ -2,6 +2,6 @@
 
 using namespace std;
 
-enum class Resource {Brick, Wood, Sheep, Wheat, Ore, Sand};
+enum class Resource {Brick, Tree, Sheep, Wheat, Ore, Sand};
 
 string getAbbrev(Resource res);
