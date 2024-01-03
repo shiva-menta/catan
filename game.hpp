@@ -60,10 +60,10 @@ class Game {
         void startGame();
 
         // Place Road
-        bool placeRoad(int row, int col, int player);
+        bool placeRoad(int row, int col, int player, bool firstTurn);
 
         // Place Town
-        bool placeSettlement(int row, int col, int player);
+        bool placeSettlement(int row, int col, int player, bool firstTurn);
 
         // Place City
         bool placeCity(int row, int col, int player);
@@ -72,10 +72,10 @@ class Game {
         bool buyDevelopmentCard(int player);
 
         // Move Robber
-        bool moveRobber(int row, int col);
+        void moveRobber(int row, int col, int player, bool fromDev);
 
-        // Roll Dice
-        int rollDice();
+        // Handle Roll Dice
+        void handleDiceRoll();
 
         // Decide Player Order
         vector<int> getPlayerOrder();

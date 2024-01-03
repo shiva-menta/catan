@@ -6,6 +6,12 @@
 #include "defs.hpp"
 #include "board.hpp"
 
+
+// To-Do
+// Consider how to implement terminal prompting
+// Implement Roll 7
+// Longest road check logic (only on road placement)
+
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
@@ -164,12 +170,28 @@ class Game {
             return false;
         }
 
-        bool moveRobber(int row, int col) {
-            return true;
+        void moveRobber(int row, int col, int player, bool fromDev) {
+            if (fromDev) {
+                knightCount[player]++;
+            }
+            board.moveRobber(row, col);
         }
 
-        int rollDice() {
-            return (rand() % 6) + (rand() % 6) + 2;
+        void handleDiceRoll() {
+            int roll = (rand() % 6) + (rand() % 6) + 2;
+            if (roll != 7) {
+                // Place Robber In New Location
+                // Make Players Discard
+            } else {
+                unordered_map<int, unordered_map<Resource, int>> newResources = board.rollToResourceCounts(roll);
+                for (auto const& [player, playerMap] : newResources) {
+                    for (auto const& [res, resCount] : playerMap) {
+                        int taken = min(resourceCards[res], resCount);
+                        resourceCards[res]-=taken;
+                        playerResourceCards[player][res]+=taken;
+                    }
+                }
+            }
         }
 
         vector<int> getPlayerOrder() {

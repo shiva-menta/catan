@@ -97,10 +97,10 @@ class Tile {
     Resource resource;
     int roll;
     vector<shared_ptr<SettlementJunction>> settlements;
-    bool hasRobber;
+    bool hasRobberVal;
 
     public:
-        Tile (Resource resourceArg, int rollArg) : resource {resourceArg}, roll {rollArg}, settlements {vector<shared_ptr<SettlementJunction>>(6, nullptr)}, hasRobber {false} {}
+        Tile (Resource resourceArg, int rollArg) : resource {resourceArg}, roll {rollArg}, settlements {vector<shared_ptr<SettlementJunction>>(6, nullptr)}, hasRobberVal {false} {}
         
         const Resource getResource() {
             return resource;
@@ -110,15 +110,19 @@ class Tile {
             return roll;
         }
 
+        bool hasRobber() {
+            return hasRobberVal;
+        }
+
         bool removeRobber() {
             bool tempHasRobber {hasRobber};
-            hasRobber = false;
+            hasRobberVal = false;
             return tempHasRobber;
         }
 
         bool placeRobber() {
             bool tempHasRobber {hasRobber};
-            hasRobber = true;
+            hasRobberVal = true;
             return tempHasRobber;
         }
 
@@ -134,11 +138,12 @@ class Tile {
 // Custom To Strings
 ostream& operator<<(ostream& ostrm, Tile &tile) {
     string roll = to_string(tile.getRoll());
+    string robber = tile.hasRobber() ? "R" : "";
     if (roll == "-1") {
-        return ostrm << " " << getAbbrev(tile.getResource()) << " ";
+        return ostrm << " " << getAbbrev(tile.getResource()) << " " << robber;
     } else {
         string padding = roll.size() == 2 ? "" : " ";
-        return ostrm << padding << roll << getAbbrev(tile.getResource());
+        return ostrm << padding << roll << getAbbrev(tile.getResource()) << robber;
     }
 }
 ostream& operator<<(ostream& ostrm, SettlementJunction &settlement) {
@@ -170,11 +175,12 @@ ostream& operator<<(ostream& ostrm, RoadJunction &road) {
 
 class Board {
     vector<vector<Tile>> tileGrid;
-    map<int, list<Tile*>> rollTileLists;
+    unordered_map<int, list<Tile*>> rollTileLists;
     vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
     unsigned seed = 0;
     int numTiles {19};
     const vector<int> rowLengths {3,4,5,4,3};
+    Tile* robberTile;
 
     public:
         string formatNumber(int num) {
@@ -253,6 +259,8 @@ class Board {
                     resourceStack.pop_back();
                     if (lastResource == Resource::Sand) {
                         tileGrid[currentRow].push_back(Tile {lastResource, -1});
+                        Tile& newTile = tileGrid[currentRow].back();
+                        newTile.placeRobber();
                     } else {
                         rollStack.pop_back();
                         tileGrid[currentRow].push_back(Tile {lastResource, lastRoll});
@@ -264,6 +272,7 @@ class Board {
                 }
                 currentRow++;
             }
+
 
             // Junction & Road Generation
             for (int row = 0; row < rowLengths.size(); row++) {
@@ -434,25 +443,103 @@ class Board {
             return;
         }
 
-        bool placeRoad(int row, int col, int player) {
+        bool moveRobber(int row, int col) {
+            robberTile->removeRobber();
+            variant<monostate, Tile*, SettlementJunction*, RoadJunction*> currPiece = pieceGrid[row][col];
+            if (holds_alternative<Tile*>(currPiece)) {
+                Tile* currTile = get<Tile*>(currPiece);
+                currTile->placeRobber();
+                robberTile = currTile;
+                return true;
+            }
+            return false;
+        }
+
+        bool placeRoad(int row, int col, int player, bool firstTurn) {
             if (holds_alternative<RoadJunction*>(pieceGrid[row - 1][col - 1])) {
                 RoadJunction& road = *get<RoadJunction*>(pieceGrid[row - 1][col - 1]);
-                return road.placeRoad(player);
+                vector<shared_ptr<SettlementJunction>>& settlements = road.getSettlements();
+                if (firstTurn) {
+                    SettlementJunction* first = settlements[0].get();
+                    SettlementJunction* second = settlements[1].get();
+                    if ((first->hasSettlement() && first->getPlayer() == player) || (second->hasSettlement() && second->getPlayer() == player)) {
+                        return road.placeRoad(player);
+                    }
+                } else {
+                    for (auto settlement : settlements) {
+                        int settlementPlayer = settlement->getPlayer();
+                        if (settlementPlayer == -1 || settlementPlayer == player) {
+                            vector<shared_ptr<RoadJunction>> settlementRoads = settlement->getRoads();
+                            for (auto settlementRoad : settlementRoads) {
+                                if (settlementRoad->getPlayer() == player) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             return false;
         }
-        bool placeSettlement(int row, int col, int player) {
+
+        bool placeSettlement(int row, int col, int player, bool firstTurn) {
             if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
-                SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
-                return settlement.placeSettlement(player);
+                SettlementJunction* settlementPtr = get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
+                SettlementJunction& settlement = *settlementPtr;
+
+                bool isValidFirstTurn = true;
+                bool isValidNormalTurn = true;
+
+                vector<shared_ptr<RoadJunction>> roads = settlement.getRoads();
+                for (shared_ptr<RoadJunction> roadSharedPtr : roads) {
+                    RoadJunction* roadPtr = roadSharedPtr.get();
+                    int roadPlayer = roadPtr->getPlayer();
+
+                    vector<shared_ptr<SettlementJunction>>& settlements = roadPtr->getSettlements();
+                    bool firstMatches = settlements[0].get() == settlementPtr;
+                    SettlementJunction* secondSettlementPtr = settlements[firstMatches ? 1 : 0].get();
+                    isValidFirstTurn &= !secondSettlementPtr->hasSettlement();
+                    isValidNormalTurn &= isValidFirstTurn & (roadPlayer == player);
+                }
+
+                if (!settlement.hasSettlement() && (firstTurn ? isValidFirstTurn : isValidNormalTurn)) {
+                    return settlement.placeSettlement(player);
+                }
             }
             return false;
         }
+
         bool upgradeSettlement(int row, int col, int player) {
             if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
                 SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
                 return settlement.upgradeSettlement(player);
             }
             return false;
+        }
+
+        unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll) {
+            unordered_map<int, unordered_map<Resource, int>> playerCounts;
+            list<Tile*>& rollList = rollTileLists[roll];
+
+            for (Tile* tile : rollList) {
+                Resource resource = tile->getResource();
+                if (tile->hasRobber()) {
+                    continue;
+                }
+                for (shared_ptr<SettlementJunction>& settlement : tile->getSettlements()) {
+                    int player = settlement.get()->getPlayer();
+                    int type = settlement.get()->getSettlementType();
+
+                    if (player != -1 && type != -1) {
+                        if (!playerCounts.count(player)) {
+                            playerCounts[player] = unordered_map<Resource, int>();
+                        }
+                        // May throw error, unsure how it is initialized.
+                        playerCounts[player][resource]++;
+                    }
+                }
+            }
+
+            return playerCounts;
         }
 };

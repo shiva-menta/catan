@@ -50,12 +50,13 @@ class Tile {
     Resource resource;
     int roll;
     vector<shared_ptr<SettlementJunction>> settlements;
-    bool hasRobber;
+    bool hasRobberVal;
 
     public:
         Tile(Resource resourceArg, int rollArg);
         Resource getResource();
         int getRoll();
+        bool hasRobber();
         bool removeRobber();
         bool placeRobber();
         vector<shared_ptr<SettlementJunction>>& getSettlements();
@@ -68,11 +69,12 @@ ostream& operator<<(ostream& ostrm, RoadJunction &road);
 
 class Board {
     vector<vector<Tile>> tileGrid;
-    map<int, list<Tile*>> rollTileLists;
+    unordered_map<int, list<Tile*>> rollTileLists;
     vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
     unsigned seed;
     int numTiles;
     const vector<int> rowLengths;
+    Tile* robberTile;
 
     public:
         string formatNumber(int num);
@@ -82,10 +84,11 @@ class Board {
         Board();
         int getLongestRoadUser();
         void printBoardState();
+        bool moveRobber(int row, int col);
         bool placeRoad(int row, int col, int player);
-        // need to account for settlement proximity, road connection (assume this is non beginning turn)
         bool placeSettlement(int row, int col, int player, bool isInitialTurn);
         bool upgradeSettlement(int row, int col, int player);
+        unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll);
 };
 
 #endif
