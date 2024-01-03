@@ -42,6 +42,14 @@ class RoadJunction {
             return false;
         }
 
+        bool removeRoad() {
+            if (player != -1) {
+                player = -1;
+                return true;
+            }
+            return false;
+        }
+
         vector<shared_ptr<SettlementJunction>>& getSettlements() {
             return settlements;
         }
@@ -444,10 +452,14 @@ class Board {
         }
 
         bool moveRobber(int row, int col) {
-            robberTile->removeRobber();
             variant<monostate, Tile*, SettlementJunction*, RoadJunction*> currPiece = pieceGrid[row][col];
             if (holds_alternative<Tile*>(currPiece)) {
                 Tile* currTile = get<Tile*>(currPiece);
+                if (currTile == robberTile) {
+                    return false;
+                }
+
+                robberTile->removeRobber();
                 currTile->placeRobber();
                 robberTile = currTile;
                 return true;
@@ -478,6 +490,14 @@ class Board {
                         }
                     }
                 }
+            }
+            return false;
+        }
+
+        bool removeRoad(int row, int col) {
+            if (holds_alternative<RoadJunction*>(pieceGrid[row - 1][col - 1])) {
+                RoadJunction& road = *get<RoadJunction*>(pieceGrid[row - 1][col - 1]);
+                road.removeRoad();
             }
             return false;
         }

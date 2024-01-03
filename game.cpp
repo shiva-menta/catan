@@ -8,6 +8,7 @@
 
 
 // To-Do
+// Development card logic
 // Consider how to implement terminal prompting
 // Implement Roll 7
 // Longest road check logic (only on road placement)
@@ -50,20 +51,18 @@ class Game {
         Game();
 
         int addUser() {
-            // Add a new entry to playerResourceCards.
+            if (isActive) {
+                return -1;
+            }
             playerResourceCards.push_back(unordered_map<Resource, int>());
-            // Add a new entry to playerDevelopmentCards.
             playerDevelopmentCards.push_back(unordered_map<DevelopmentCard, int>());
-            // Add a new entry to playerBuildingMaterials.
             playerBuildingResources.push_back(unordered_map<BuildingResource, int> {
                 {BuildingResource::Town, 5},
                 {BuildingResource::City, 4},
                 {BuildingResource::Road, 15}
             });
-            // Add a new player score.
             playerScores.push_back(0);
 
-            // Modifies player counter.
             playerCount++;
             return playerCount;
         };
@@ -170,29 +169,58 @@ class Game {
             return false;
         }
 
-        void moveRobber(int row, int col, int player, bool fromDev) {
-            if (fromDev) {
+        bool moveRobber(int row, int col, int player, bool fromDev) {
+            bool res = board.moveRobber(row, col);
+            if (fromDev && res) {
                 knightCount[player]++;
             }
-            board.moveRobber(row, col);
+            return res;
         }
 
-        void handleDiceRoll() {
-            int roll = (rand() % 6) + (rand() % 6) + 2;
-            if (roll != 7) {
-                // Place Robber In New Location
-                // Make Players Discard
-            } else {
-                unordered_map<int, unordered_map<Resource, int>> newResources = board.rollToResourceCounts(roll);
-                for (auto const& [player, playerMap] : newResources) {
-                    for (auto const& [res, resCount] : playerMap) {
-                        int taken = min(resourceCards[res], resCount);
-                        resourceCards[res]-=taken;
-                        playerResourceCards[player][res]+=taken;
-                    }
+        int rollDice() {
+            return (rand() % 6) + (rand() % 6) + 2;
+        }
+
+        void updateResourceCountsFromRoll(int roll) {
+            unordered_map<int, unordered_map<Resource, int>> newResources = board.rollToResourceCounts(roll);
+            for (auto const& [player, playerMap] : newResources) {
+                for (auto const& [res, resCount] : playerMap) {
+                    int taken = min(resourceCards[res], resCount);
+                    resourceCards[res]-=taken;
+                    playerResourceCards[player][res]+=taken;
                 }
             }
         }
+
+        bool useKnight(int player, int row, int col) {
+            return moveRobber(row, col, player, true);
+        };
+        bool useMonopoly(int player, Resource res) {
+            int resourceCount = 0;
+            for (int i = 0; i < playerResourceCards.size(); i++) {
+                resourceCount += playerResourceCards[i][res];
+                playerResourceCards[i][res] = 0;
+            }
+            playerResourceCards[player][res] += resourceCount;
+        };
+        bool useRoadBuilding(int player, int row1, int col1, int row2, int col2) {
+            bool firstRoad = board.placeRoad(row1, col1, player);
+            bool secondRoad = board.placeRoad(row2, col2, player);
+
+            if (!(firstRoad && secondRoad)) {
+                board.removeRoad(row1, col1);
+                board.removeRoad(row2, col2);
+            }
+            return firstRoad && secondRoad;
+        };
+        bool useYearOfPlenty(int player, Resource res1, Resource res2) {
+            for (auto resource : vector<Resource> {res1, res2}) {
+                if (resourceCards[resource] > 0) {
+                    resourceCards[resource]--;
+                    playerResourceCards[player][resource]++;
+                }
+            }
+        };
 
         vector<int> getPlayerOrder() {
             vector<int> order(playerCount);

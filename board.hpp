@@ -27,6 +27,7 @@ class RoadJunction {
         int getDisplay();
         bool hasRoad();
         bool placeRoad(int playerArg);
+        bool removeRoad();
         vector<shared_ptr<SettlementJunction>>& getSettlements();
 };
 
@@ -86,6 +87,7 @@ class Board {
         void printBoardState();
         bool moveRobber(int row, int col);
         bool placeRoad(int row, int col, int player);
+        bool removeRoad(int row, int col);
         bool placeSettlement(int row, int col, int player, bool isInitialTurn);
         bool upgradeSettlement(int row, int col, int player);
         unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll);

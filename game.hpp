@@ -9,7 +9,6 @@
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
-// (14 Knight/Soldier Cards, 6 Progress Cards, 5 Victory Point Cards).
 enum DevelopmentCard {Knight, Monopoly, RoadBuilding, YearOfPlenty, VictoryPoint};
 
 const int WIN_THRESHOLD;
@@ -41,13 +40,10 @@ class Game {
     unordered_map<int, int> knightCount;
 
     public:
-        // Initialize playerCount - keeps track of number of players in game.
-        // Initialize turnCount - keeps track of which player's turn it is.
-        // Initialize scoreboard - keeps track of score of all players.
-        // Initialize full stack of resource cards.
-        // Initialize full stack of development cards.
+        // Initialize board resources.
         Game();
 
+        // Add user to the current game if active.
         int addUser();
 
         // Initialize resource card stack.
@@ -72,10 +68,17 @@ class Game {
         bool buyDevelopmentCard(int player);
 
         // Move Robber
-        void moveRobber(int row, int col, int player, bool fromDev);
+        bool moveRobber(int row, int col, int player, bool fromDev);
 
         // Handle Roll Dice
-        void handleDiceRoll();
+        int rollDice();
+        void updateResourceCountsFromRoll(int roll);
+
+        // Development Card Actions
+        bool useKnight(int player, int row, int col);
+        bool useMonopoly(int player, Resource res);
+        bool useRoadBuilding(int player, int row1, int col1, int row2, int col2);
+        bool useYearOfPlenty(int player, Resource res1, Resource res2);
 
         // Decide Player Order
         vector<int> getPlayerOrder();
