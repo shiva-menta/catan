@@ -13,6 +13,8 @@
 // Implement Roll 7
 // Longest road check logic (only on road placement)
 
+// One person is host and then joins as a client from another tab – host shouldnt' be able to play
+
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
@@ -235,6 +237,10 @@ class Game {
         string getPaddedInt(int valArg) {
             string val = to_string(valArg);
             return val + string(' ', printWidth - val.size());
+        }
+
+        bool endTurn() {
+            turnCount++;
         }
 
         void printGameState(int playerView) {

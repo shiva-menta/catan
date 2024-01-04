@@ -86,6 +86,9 @@ class Game {
         // Check Win Condition
         bool isPlayerWinner(int player);
 
+        // End Turn
+        bool endTurn();
+
         // Print user view.
         void printGameState(int player);
 };
