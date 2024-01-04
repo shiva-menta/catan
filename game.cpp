@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <random>
 #include <iostream>
+#include <sstream>
 #include "defs.hpp"
 #include "board.hpp"
-
 
 // To-Do
 // Development card logic
@@ -18,9 +18,9 @@
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
-enum DevelopmentCard {Knight, Monopoly, RoadBuilding, YearOfPlenty, VictoryPoint};
 
 const int WIN_THRESHOLD = 10;
+const int DISCARD_LIMIT = 7;
 const int printWidth = 6;
 
 class Game {
@@ -36,6 +36,7 @@ class Game {
     int playerCount;
     vector<int> playerScores;
     vector<unordered_map<BuildingResource, int>> playerBuildingResources;
+    vector<int> playerOrder;
     
     // Resource Cards
     unordered_map<Resource, int> resourceCards;
@@ -96,24 +97,32 @@ class Game {
 
         void startGame() {
             isActive = true;
+            playerOrder = generatePlayerOrder();
         }
 
+        // Implement
         bool hasResources(int player, unordered_map<Resource, int> res) {
+            for (const auto& pair : res) {
+                if (pair.second > playerResourceCards[player][pair.first]) {
+                    return false;
+                }
+            }
             return true;
         }
-
         void useResources(int player, unordered_map<Resource, int> res) {
-            return;
+            for (const auto& pair : res) {
+                playerResourceCards[player][pair.first]-=pair.second;
+            }
         }
 
-        bool placeRoad(int row, int col, int player) {
+        bool placeRoad(int player, int row, int col, bool firstTurn) {
             unordered_map<Resource, int> roadResources {
                 {Resource::Brick, 1},
                 {Resource::Tree, 1}
             };
             bool resourcesValid = hasResources(player, roadResources);
             if (playerBuildingResources[player][BuildingResource::Road] > 0 && resourcesValid) {
-                if (board.placeRoad(row, col, player)) {
+                if (board.placeRoad(row, col, player, firstTurn)) {
                     useResources(player, roadResources);
                     return true;
                 }
@@ -121,7 +130,7 @@ class Game {
             return false;
         }
         
-        bool placeSettlement(int row, int col, int player) {
+        bool placeSettlement(int player, int row, int col, bool firstTurn) {
             unordered_map<Resource, int> settlementResources {
                 {Resource::Brick, 1},
                 {Resource::Tree, 1},
@@ -130,7 +139,7 @@ class Game {
             };
             bool resourcesValid = hasResources(player, settlementResources);
             if (playerBuildingResources[player][BuildingResource::Town] > 0 && resourcesValid) {
-                if (board.placeRoad(row, col, player)) {
+                if (board.placeSettlement(row, col, player, firstTurn)) {
                     useResources(player, settlementResources);
                     playerScores[player]++;
                     return true;
@@ -139,14 +148,14 @@ class Game {
             return false;
         }
 
-        bool upgradeSettlement(int row, int col, int player) {
+        bool upgradeSettlement(int player, int row, int col) {
             unordered_map<Resource, int> cityResources {
                 {Resource::Ore, 3},
                 {Resource::Wheat, 2}
             };
             bool resourcesValid = hasResources(player, cityResources);
             if (playerBuildingResources[player][BuildingResource::City] > 0 && resourcesValid) {
-                if (board.placeRoad(row, col, player)) {
+                if (board.upgradeSettlement(row, col, player)) {
                     useResources(player, cityResources);
                     playerScores[player]++;
                     playerBuildingResources[player][BuildingResource::Town]++;
@@ -171,13 +180,46 @@ class Game {
             return false;
         }
 
-        bool moveRobber(int row, int col, int player, bool fromDev) {
+        bool moveRobber(int player, int row, int col, bool fromDev) {
             bool res = board.moveRobber(row, col);
             if (fromDev && res) {
                 knightCount[player]++;
             }
             return res;
         }
+
+        vector<bool> playersUnderLimit() {
+            vector<bool> playerStatus(playerCount, true);
+            for (int i = 0; i < playerCount; i++) {
+                int resSum = 0;
+                for (const auto& pair : playerResourceCards[i]) {
+                    resSum += pair.second;
+                }
+                playerStatus[i] = resSum <= DISCARD_LIMIT;
+            }
+
+            return playerStatus;
+        }
+
+        bool discardCardsOverLimit(int player, unordered_map<Resource, int> discards) {
+            int removeCards = 0;
+            int totalCards = 0;
+            for (const auto& pair : playerResourceCards[player]) {
+                totalCards += pair.second;
+                if (discards.count(pair.first)) {
+                    if (discards[pair.first] > playerResourceCards[player][pair.first]) {
+                        return false;
+                    }
+                    removeCards += discards[pair.first];
+                }
+            }
+
+            if (totalCards - removeCards == 7) {
+                useResources(player, discards);
+                return true;
+            }
+            return false;
+        };
 
         int rollDice() {
             return (rand() % 6) + (rand() % 6) + 2;
@@ -195,39 +237,62 @@ class Game {
         }
 
         bool useKnight(int player, int row, int col) {
-            return moveRobber(row, col, player, true);
+            bool hasCard = playerDevelopmentCards[player][DevelopmentCard::Knight] > 0;
+            if (hasCard && moveRobber(row, col, player, true)) {
+                playerDevelopmentCards[player][DevelopmentCard::Knight]--;
+                return true;
+            }
+            return false;
         };
         bool useMonopoly(int player, Resource res) {
+            if (playerDevelopmentCards[player][DevelopmentCard::Monopoly] <= 0) {
+                return false;
+            }
+
             int resourceCount = 0;
             for (int i = 0; i < playerResourceCards.size(); i++) {
                 resourceCount += playerResourceCards[i][res];
                 playerResourceCards[i][res] = 0;
             }
             playerResourceCards[player][res] += resourceCount;
+            return true;
         };
         bool useRoadBuilding(int player, int row1, int col1, int row2, int col2) {
-            bool firstRoad = board.placeRoad(row1, col1, player);
-            bool secondRoad = board.placeRoad(row2, col2, player);
+            bool hasCard = playerDevelopmentCards[player][DevelopmentCard::RoadBuilding] > 0;
+            if (!hasCard) {
+                return false;
+            }
+
+            bool firstRoad = board.placeRoad(row1, col1, player, false);
+            bool secondRoad = board.placeRoad(row2, col2, player, false);
 
             if (!(firstRoad && secondRoad)) {
                 board.removeRoad(row1, col1);
                 board.removeRoad(row2, col2);
+                playerDevelopmentCards[player][DevelopmentCard::RoadBuilding]--;
             }
             return firstRoad && secondRoad;
         };
         bool useYearOfPlenty(int player, Resource res1, Resource res2) {
+            if (playerDevelopmentCards[player][DevelopmentCard::YearOfPlenty] <= 0) {
+                return false;
+            }
+
             for (auto resource : vector<Resource> {res1, res2}) {
                 if (resourceCards[resource] > 0) {
                     resourceCards[resource]--;
                     playerResourceCards[player][resource]++;
                 }
             }
+            return true;
         };
 
-        vector<int> getPlayerOrder() {
+        vector<int> generatePlayerOrder() {
             vector<int> order(playerCount);
             iota(order.begin(), order.end(), default_random_engine(seed));
             shuffle(order.begin(), order.end(), default_random_engine(seed));
+            
+            return order;
         }
 
         bool isPlayerWinner(int player) { 
@@ -239,17 +304,30 @@ class Game {
             return val + string(' ', printWidth - val.size());
         }
 
-        bool endTurn() {
+        void nextTurn() {
             turnCount++;
         }
 
-        void printGameState(int playerView) {
-            board.printBoardState();
-            cout << endl;
+        int currentTurnPlayer() {
+            return playerOrder[turnCount % playerCount];
+        }
+
+        int getTurn() {
+            return turnCount;
+        }
+
+        vector<int> getPlayerOrder() {
+            return playerOrder;
+        }
+
+        string printGameState(int playerView) {
+            string boardStr = board.printBoardState();
+            stringstream output;
+            output << "\n";
 
             // All Player Summaries
-            cout << "P.   " << "Score  " << "Res.   " << "Dev.   " << endl;
-            cout << string('-', 10) << endl;
+            output << "P.   " << "Score  " << "Res.   " << "Dev.   " << "\n";
+            output << string('-', 10) << "\n";
             for (int i = 0; i < playerCount; i++) {
                 string player = getPaddedInt(i);
 
@@ -266,36 +344,38 @@ class Game {
                     devSum += pair.second;
                 }
                 string dev = getPaddedInt(devSum);
-                cout << player << score << res << dev << endl;
+                output << player << score << res << dev << "\n";
             }
-            cout << endl;
+            output << "\n";
 
             // My Information Summary (score resource cards type, dev cards type, building materials)
-            cout << "My Information" << endl;
-            cout << string('-', 5) << endl;
+            output << "My Information" << "\n";
+            output << string('-', 5) << "\n";
             // Score
             int modScore = playerScores[playerView] + playerDevelopmentCards[playerView][DevelopmentCard::VictoryPoint];
-            cout << "Score - " << modScore << endl;
+            output << "Score - " << modScore << "\n";
             // Resource Cards
-            cout << "Resources -";
-            cout << " Brick: x" << playerResourceCards[playerView][Resource::Brick];
-            cout << " Tree: x" << playerResourceCards[playerView][Resource::Tree];
-            cout << " Wheat: x" << playerResourceCards[playerView][Resource::Wheat];
-            cout << " Sheep: x" << playerResourceCards[playerView][Resource::Sheep];
-            cout << " Ore: x" << playerResourceCards[playerView][Resource::Ore];
-            cout << endl;
+            output << "Resources -";
+            output << " Brick: x" << playerResourceCards[playerView][Resource::Brick];
+            output << " Tree: x" << playerResourceCards[playerView][Resource::Tree];
+            output << " Wheat: x" << playerResourceCards[playerView][Resource::Wheat];
+            output << " Sheep: x" << playerResourceCards[playerView][Resource::Sheep];
+            output << " Ore: x" << playerResourceCards[playerView][Resource::Ore];
+            output << "\n";
             // Dev Cards
-            cout << "DevCards -";
-            cout << " Knight: x" << playerDevelopmentCards[playerView][DevelopmentCard::Knight];
-            cout << " Monopoly: x" << playerDevelopmentCards[playerView][DevelopmentCard::Monopoly];
-            cout << " RoadBuilder: x" << playerDevelopmentCards[playerView][DevelopmentCard::RoadBuilding];
-            cout << " YearOfPlenty: x" << playerDevelopmentCards[playerView][DevelopmentCard::YearOfPlenty];
-            cout << " VictoryPoint: x" << playerDevelopmentCards[playerView][DevelopmentCard::VictoryPoint];
-            cout << endl;
+            output << "DevCards -";
+            output << " Knight: x" << playerDevelopmentCards[playerView][DevelopmentCard::Knight];
+            output << " Monopoly: x" << playerDevelopmentCards[playerView][DevelopmentCard::Monopoly];
+            output << " RoadBuilder: x" << playerDevelopmentCards[playerView][DevelopmentCard::RoadBuilding];
+            output << " YearOfPlenty: x" << playerDevelopmentCards[playerView][DevelopmentCard::YearOfPlenty];
+            output << " VictoryPoint: x" << playerDevelopmentCards[playerView][DevelopmentCard::VictoryPoint];
+            output << "\n";
             // Building Materials
-            cout << "Build -";
-            cout << " Town: x" << playerBuildingResources[playerView][BuildingResource::Town];
-            cout << " City: x" << playerBuildingResources[playerView][BuildingResource::City];
-            cout << " Road: x" << playerBuildingResources[playerView][BuildingResource::Road];
+            output << "Build -";
+            output << " Town: x" << playerBuildingResources[playerView][BuildingResource::Town];
+            output << " City: x" << playerBuildingResources[playerView][BuildingResource::City];
+            output << " Road: x" << playerBuildingResources[playerView][BuildingResource::Road];
+
+            return boardStr + output.str();
         }
 };

@@ -5,6 +5,7 @@
 #include <random>
 #include <unordered_set>
 #include <iostream>
+#include <sstream>
 #include "defs.hpp"
 
 using namespace std;
@@ -90,6 +91,16 @@ class SettlementJunction {
                 return true;
             }
             return false;
+        }
+
+        bool hasEmptyRoads() {
+            for (shared_ptr<RoadJunction> roadSharedPtr : roads) {
+                RoadJunction* roadPtr = roadSharedPtr.get();
+                if (roadPtr != nullptr && roadPtr->hasRoad()) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         vector<shared_ptr<RoadJunction>>& getRoads() {
@@ -411,15 +422,16 @@ class Board {
             return -1;
         }
 
-        void printBoardState() {
+        string printBoardState() {
+            stringstream output;
             for (int col = 0; col < 22; col++) {
-                cout << formatNumber(col) << " ";
+                output << formatNumber(col) << " ";
             }
-            cout << endl;
+            output << "\n";
 
             for (int row = 0; row < pieceGrid.size(); row++) {
                 // Print Row Number
-                cout << formatNumber(row + 1) << " ";
+                output << formatNumber(row + 1) << " ";
 
                 // Print Row contents
                 int rowStart = 0;
@@ -433,22 +445,22 @@ class Board {
                 for (int col = 0; col < pieceGrid[row].size(); col++) {
                     if (holds_alternative<monostate>(pieceGrid[row][col])) {
                         if (rowStart <= col && col <= rowEnd) {
-                            cout << "   ";
+                            output << "   ";
                         } else {
-                            cout << "~~~";
+                            output << "~~~";
                         }
                     } else if (holds_alternative<Tile*>(pieceGrid[row][col])) {
-                        cout << *get<Tile*>(pieceGrid[row][col]);
+                        output << *get<Tile*>(pieceGrid[row][col]);
                     } else if (holds_alternative<SettlementJunction*>(pieceGrid[row][col])) {
-                        cout << *get<SettlementJunction*>(pieceGrid[row][col]);
+                        output << *get<SettlementJunction*>(pieceGrid[row][col]);
                     } else {
-                        cout << *get<RoadJunction*>(pieceGrid[row][col]);
+                        output << *get<RoadJunction*>(pieceGrid[row][col]);
                     }
-                    cout << " ";
+                    output << " ";
                 }
-                cout << endl;
+                output << "\n";
             }
-            return;
+            return output.str();
         }
 
         bool moveRobber(int row, int col) {
@@ -474,7 +486,11 @@ class Board {
                 if (firstTurn) {
                     SettlementJunction* first = settlements[0].get();
                     SettlementJunction* second = settlements[1].get();
-                    if ((first->hasSettlement() && first->getPlayer() == player) || (second->hasSettlement() && second->getPlayer() == player)) {
+
+                    bool firstValid = first->hasSettlement() && first->getPlayer() == player && first->hasEmptyRoads();
+                    bool secondValid = second->hasSettlement() && second->getPlayer() == player && second->hasEmptyRoads();
+
+                    if (firstValid || secondValid) {
                         return road.placeRoad(player);
                     }
                 } else {

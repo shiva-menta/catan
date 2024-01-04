@@ -29,11 +29,13 @@ string blockingReceive(int sock) {
     return "";
 }
 
-void receiveThreadFunction(int sock, bool* sessionOngoing) {
-    while (*sessionOngoing == true) {
+void receiveThreadFunction(int sock, bool* isSessionActive) {
+    while (*isSessionActive) {
         string message = blockingReceive(sock);
         if (!message.empty()) {
             processServerMessage(message);
+        } else {
+            return;
         }
     }
 }
@@ -49,7 +51,7 @@ int main(int argc, char** argv) {
         cerr << "Invalid port number." << endl;
         return -1;
     };
-    int addr = stoi(arg1);
+    int port = stoi(arg1);
     char* hostAddr = argv[2];
 
     // Create Socket
@@ -58,7 +60,7 @@ int main(int argc, char** argv) {
 
     // Establish Server Address
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(addr);
+    serv_addr.sin_port = htons(port);
 
     // Convert IP Address
     if (inet_pton(AF_INET, hostAddr, &serv_addr.sin_addr) <= 0) {
@@ -73,14 +75,14 @@ int main(int argc, char** argv) {
     };
 
     // Launch Read & Update Thread
-    bool sessionOngoing = true;
-    thread receiveThread(receiveThreadFunction, sock, &sessionOngoing);
+    bool isSessionActive = true;
+    thread receiveThread(receiveThreadFunction, sock, &isSessionActive);
 
     // Loop to Process User Commands & Send
     string input;
     while (getline(cin, input)) {
         if (input == "exit") {
-            sessionOngoing = false;
+            isSessionActive = false;
             break;
         }
         int dataSize = input.size();

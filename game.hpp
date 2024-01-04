@@ -12,6 +12,7 @@ enum BuildingResource {Town, City, Road};
 enum DevelopmentCard {Knight, Monopoly, RoadBuilding, YearOfPlenty, VictoryPoint};
 
 const int WIN_THRESHOLD;
+const int DISCARD_LIMIT;
 
 class Game {
     // Game State
@@ -56,19 +57,23 @@ class Game {
         void startGame();
 
         // Place Road
-        bool placeRoad(int row, int col, int player, bool firstTurn);
+        bool placeRoad(int player, int row, int col, bool firstTurn);
 
         // Place Town
-        bool placeSettlement(int row, int col, int player, bool firstTurn);
+        bool placeSettlement(int player, int row, int col, bool firstTurn);
 
         // Place City
-        bool placeCity(int row, int col, int player);
+        bool placeCity(int player, int row, int col);
 
         // Buy Development Card
-        bool buyDevelopmentCard(int player);
+        bool buyDevelopmentCard(int player, DevelopmentCard card);
 
         // Move Robber
-        bool moveRobber(int row, int col, int player, bool fromDev);
+        bool moveRobber(int player, int row, int col, bool fromDev);
+
+        // Discard Cards
+        vector<bool> playersUnderLimit();
+        bool discardCardsOverLimit(int player, unordered_map<Resource, int> cards);
 
         // Handle Roll Dice
         int rollDice();
@@ -87,10 +92,16 @@ class Game {
         bool isPlayerWinner(int player);
 
         // End Turn
-        bool endTurn();
+        void nextTurn();
+
+        // Player of Current Turn
+        int currentTurnPlayer();
+
+        // Current Turn
+        int getTurn();
 
         // Print user view.
-        void printGameState(int player);
+        string printGameState(int player);
 };
 
 int main();

@@ -43,6 +43,7 @@ class SettlementJunction {
         int getPlayer();
         bool placeSettlement(int playerArg);
         bool upgradeSettlement(int playerArg);
+        bool hasEmptyRoads();
         unordered_set<shared_ptr<RoadJunction>>& getRoads();
         RoadJunction* getRoad(HexPos pos);
 };
@@ -84,11 +85,11 @@ class Board {
         void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2);
         Board();
         int getLongestRoadUser();
-        void printBoardState();
+        string printBoardState();
         bool moveRobber(int row, int col);
-        bool placeRoad(int row, int col, int player);
+        bool placeRoad(int row, int col, int player, bool firstTurn);
         bool removeRoad(int row, int col);
-        bool placeSettlement(int row, int col, int player, bool isInitialTurn);
+        bool placeSettlement(int row, int col, int player, bool firstTurn);
         bool upgradeSettlement(int row, int col, int player);
         unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll);
 };
