@@ -1,3 +1,6 @@
+#ifndef DEFS_H
+#define DEFS_H
+
 #include <string>
 
 using namespace std;
@@ -7,4 +10,6 @@ enum DevelopmentCard {Knight, Monopoly, RoadBuilding, YearOfPlenty, VictoryPoint
 
 string getAbbrev(Resource res);
 Resource parseResource(string str);
-DevelopmentCard parseDevelopmentCard(string str);
+int parseDevelopmentCard(string str);
+
+#endif

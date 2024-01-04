@@ -94,4 +94,6 @@ class Board {
         unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll);
 };
 
+int main();
+
 #endif

@@ -65,7 +65,7 @@ class SettlementJunction {
         SettlementJunction() : roads {vector<shared_ptr<RoadJunction>>(6, nullptr)} {}
 
         bool hasSettlement() {
-            return player == -1;
+            return player != -1;
         }
 
         int getSettlementType() {
@@ -134,13 +134,14 @@ class Tile {
         }
 
         bool removeRobber() {
-            bool tempHasRobber {hasRobber};
+            cout << getAbbrev(resource) << to_string(roll);
+            bool tempHasRobber {hasRobberVal};
             hasRobberVal = false;
             return tempHasRobber;
         }
 
         bool placeRobber() {
-            bool tempHasRobber {hasRobber};
+            bool tempHasRobber {hasRobberVal};
             hasRobberVal = true;
             return tempHasRobber;
         }
@@ -159,10 +160,11 @@ ostream& operator<<(ostream& ostrm, Tile &tile) {
     string roll = to_string(tile.getRoll());
     string robber = tile.hasRobber() ? "R" : "";
     if (roll == "-1") {
-        return ostrm << " " << getAbbrev(tile.getResource()) << " " << robber;
+        string padding = robber == "R" ? "" : " ";
+        return ostrm << padding << robber << getAbbrev(tile.getResource()) << " ";
     } else {
-        string padding = roll.size() == 2 ? "" : " ";
-        return ostrm << padding << roll << getAbbrev(tile.getResource()) << robber;
+        string padding = (roll.size() + robber.size()) >= 2 ? "" : " ";
+        return ostrm << robber << padding << roll << getAbbrev(tile.getResource());
     }
 }
 ostream& operator<<(ostream& ostrm, SettlementJunction &settlement) {
@@ -270,6 +272,7 @@ class Board {
                 throw length_error("Incorrect Size Stacks");
             }
             int currentRow = 0;
+            // rule of thumb - don't store pointers to lists of vectors since they can be reallocated
             while (resourceStack.size() != 0 && rollStack.size() != 0 && currentRow < rowLengths.size()) {
                 for (int i = 0; i < rowLengths[currentRow] && resourceStack.size() != 0 && rollStack.size() != 0; i++) {
                     Resource lastResource = resourceStack.back();
@@ -277,21 +280,26 @@ class Board {
 
                     resourceStack.pop_back();
                     if (lastResource == Resource::Sand) {
-                        tileGrid[currentRow].push_back(Tile {lastResource, -1});
-                        Tile& newTile = tileGrid[currentRow].back();
-                        newTile.placeRobber();
+                        lastRoll = -1;
                     } else {
                         rollStack.pop_back();
-                        tileGrid[currentRow].push_back(Tile {lastResource, lastRoll});
-                        Tile& newTile = tileGrid[currentRow].back();
-                        if (rollTileLists.count(lastRoll)) {
-                            rollTileLists[lastRoll].push_back(&newTile);
-                        }
                     }
+                    tileGrid[currentRow].push_back(Tile {lastResource, lastRoll});
                 }
                 currentRow++;
             }
-
+            // Second Loop (because pointers to lists of vectors can be iffy if reallocated)
+            for (int row = 0; row < rowLengths.size(); row++) {
+                for (int col = 0; col < rowLengths[row]; col++) {
+                    Tile& currTile = tileGrid[row][col];
+                    if (currTile.getResource() != Resource::Sand) {
+                        rollTileLists[currTile.getRoll()].push_back(&tileGrid[row][col]);
+                    } else {
+                        robberTile = &tileGrid[row][col];
+                        robberTile->placeRobber();
+                    }
+                }
+            }
 
             // Junction & Road Generation
             for (int row = 0; row < rowLengths.size(); row++) {
@@ -464,7 +472,7 @@ class Board {
         }
 
         bool moveRobber(int row, int col) {
-            variant<monostate, Tile*, SettlementJunction*, RoadJunction*> currPiece = pieceGrid[row][col];
+            variant<monostate, Tile*, SettlementJunction*, RoadJunction*> currPiece = pieceGrid[row-1][col-1];
             if (holds_alternative<Tile*>(currPiece)) {
                 Tile* currTile = get<Tile*>(currPiece);
                 if (currTile == robberTile) {
@@ -529,13 +537,15 @@ class Board {
                 vector<shared_ptr<RoadJunction>> roads = settlement.getRoads();
                 for (shared_ptr<RoadJunction> roadSharedPtr : roads) {
                     RoadJunction* roadPtr = roadSharedPtr.get();
-                    int roadPlayer = roadPtr->getPlayer();
+                    if (roadPtr != nullptr) {
+                        int roadPlayer = roadPtr->getPlayer();
 
-                    vector<shared_ptr<SettlementJunction>>& settlements = roadPtr->getSettlements();
-                    bool firstMatches = settlements[0].get() == settlementPtr;
-                    SettlementJunction* secondSettlementPtr = settlements[firstMatches ? 1 : 0].get();
-                    isValidFirstTurn &= !secondSettlementPtr->hasSettlement();
-                    isValidNormalTurn &= isValidFirstTurn & (roadPlayer == player);
+                        vector<shared_ptr<SettlementJunction>>& settlements = roadPtr->getSettlements();
+                        bool firstMatches = settlements[0].get() == settlementPtr;
+                        SettlementJunction* secondSettlementPtr = settlements[firstMatches ? 1 : 0].get();
+                        isValidFirstTurn &= !secondSettlementPtr->hasSettlement();
+                        isValidNormalTurn &= isValidFirstTurn & (roadPlayer == player);
+                    }
                 }
 
                 if (!settlement.hasSettlement() && (firstTurn ? isValidFirstTurn : isValidNormalTurn)) {
@@ -579,3 +589,12 @@ class Board {
             return playerCounts;
         }
 };
+
+int main() {
+    Board b = Board();
+    cout << b.moveRobber(4, 5) << endl;
+    // cout << b.moveRobber(10, 11) << endl;
+    // cout << b.moveRobber(6, 7) << endl;
+    // cout << b.moveRobber(10, 7) << endl;
+    cout << b.printBoardState();
+}
