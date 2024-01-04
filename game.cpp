@@ -7,14 +7,6 @@
 #include "defs.hpp"
 #include "board.hpp"
 
-// To-Do
-// Development card logic
-// Consider how to implement terminal prompting
-// Implement Roll 7
-// Longest road check logic (only on road placement)
-
-// One person is host and then joins as a client from another tab – host shouldnt' be able to play
-
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
@@ -97,10 +89,11 @@ class Game {
 
         void startGame() {
             isActive = true;
-            playerOrder = generatePlayerOrder();
+            vector<int> playerOrder(playerCount);
+            iota(playerOrder.begin(), playerOrder.end(), 0);
+            shuffle(playerOrder.begin(), playerOrder.end(), default_random_engine(seed));
         }
 
-        // Implement
         bool hasResources(int player, unordered_map<Resource, int> res) {
             for (const auto& pair : res) {
                 if (pair.second > playerResourceCards[player][pair.first]) {
@@ -287,25 +280,21 @@ class Game {
             return true;
         };
 
-        vector<int> generatePlayerOrder() {
-            vector<int> order(playerCount);
-            iota(order.begin(), order.end(), default_random_engine(seed));
-            shuffle(order.begin(), order.end(), default_random_engine(seed));
-            
-            return order;
+        vector<int> getPlayerOrder() {
+            return playerOrder;
         }
 
         bool isPlayerWinner(int player) { 
             return playerScores[player] >= WIN_THRESHOLD;
         }
 
+        void nextTurn() {
+            turnCount++;
+        }
+
         string getPaddedInt(int valArg) {
             string val = to_string(valArg);
             return val + string(' ', printWidth - val.size());
-        }
-
-        void nextTurn() {
-            turnCount++;
         }
 
         int currentTurnPlayer() {
@@ -314,10 +303,6 @@ class Game {
 
         int getTurn() {
             return turnCount;
-        }
-
-        vector<int> getPlayerOrder() {
-            return playerOrder;
         }
 
         string printGameState(int playerView) {
@@ -379,3 +364,7 @@ class Game {
             return boardStr + output.str();
         }
 };
+
+int main() {
+    Game g = Game();
+}

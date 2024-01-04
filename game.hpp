@@ -9,10 +9,10 @@
 using namespace std;
 
 enum BuildingResource {Town, City, Road};
-enum DevelopmentCard {Knight, Monopoly, RoadBuilding, YearOfPlenty, VictoryPoint};
 
 const int WIN_THRESHOLD;
 const int DISCARD_LIMIT;
+const int printWidth;
 
 class Game {
     // Game State
@@ -27,6 +27,7 @@ class Game {
     int playerCount;
     vector<int> playerScores;
     vector<unordered_map<BuildingResource, int>> playerBuildingResources;
+    vector<int> playerOrder;
     
     // Resource Cards
     unordered_map<Resource, int> resourceCards;
@@ -56,6 +57,10 @@ class Game {
         // Start game turns. Needs to handle logic of processing special first turn as well.
         void startGame();
 
+        // Resource Checks
+        bool hasResources(int player, unordered_map<Resource, int> res);
+        void useResources(int player, unordered_map<Resource, int> res);
+
         // Place Road
         bool placeRoad(int player, int row, int col, bool firstTurn);
 
@@ -63,7 +68,7 @@ class Game {
         bool placeSettlement(int player, int row, int col, bool firstTurn);
 
         // Place City
-        bool placeCity(int player, int row, int col);
+        bool upgradeSettlement(int player, int row, int col);
 
         // Buy Development Card
         bool buyDevelopmentCard(int player, DevelopmentCard card);
@@ -99,6 +104,9 @@ class Game {
 
         // Current Turn
         int getTurn();
+
+        // Helper
+        string getPaddedInt(int valArg);
 
         // Print user view.
         string printGameState(int player);

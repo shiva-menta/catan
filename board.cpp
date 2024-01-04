@@ -134,7 +134,6 @@ class Tile {
         }
 
         bool removeRobber() {
-            cout << getAbbrev(resource) << to_string(roll);
             bool tempHasRobber {hasRobberVal};
             hasRobberVal = false;
             return tempHasRobber;
@@ -506,9 +505,10 @@ class Board {
                         int settlementPlayer = settlement->getPlayer();
                         if (settlementPlayer == -1 || settlementPlayer == player) {
                             vector<shared_ptr<RoadJunction>> settlementRoads = settlement->getRoads();
-                            for (auto settlementRoad : settlementRoads) {
-                                if (settlementRoad->getPlayer() == player) {
-                                    return true;
+                            for (shared_ptr<RoadJunction> settlementRoad : settlementRoads) {
+                                RoadJunction* roadPtr = settlementRoad.get();
+                                if (roadPtr != nullptr && settlementRoad->getPlayer() == player) {
+                                    return road.placeRoad(player);
                                 }
                             }
                         }
@@ -531,8 +531,8 @@ class Board {
                 SettlementJunction* settlementPtr = get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
                 SettlementJunction& settlement = *settlementPtr;
 
-                bool isValidFirstTurn = true;
-                bool isValidNormalTurn = true;
+                bool isValidFirstTurn = true; // not within 1 distance of any other settlement
+                bool isValidNormalTurn = false; // not within 1 distance & connected by a road
 
                 vector<shared_ptr<RoadJunction>> roads = settlement.getRoads();
                 for (shared_ptr<RoadJunction> roadSharedPtr : roads) {
@@ -544,11 +544,11 @@ class Board {
                         bool firstMatches = settlements[0].get() == settlementPtr;
                         SettlementJunction* secondSettlementPtr = settlements[firstMatches ? 1 : 0].get();
                         isValidFirstTurn &= !secondSettlementPtr->hasSettlement();
-                        isValidNormalTurn &= isValidFirstTurn & (roadPlayer == player);
+                        isValidNormalTurn |= roadPlayer == player;
                     }
                 }
 
-                if (!settlement.hasSettlement() && (firstTurn ? isValidFirstTurn : isValidNormalTurn)) {
+                if (!settlement.hasSettlement() && isValidFirstTurn && (firstTurn ? isValidFirstTurn : isValidNormalTurn)) {
                     return settlement.placeSettlement(player);
                 }
             }
@@ -589,12 +589,3 @@ class Board {
             return playerCounts;
         }
 };
-
-int main() {
-    Board b = Board();
-    cout << b.moveRobber(4, 5) << endl;
-    // cout << b.moveRobber(10, 11) << endl;
-    // cout << b.moveRobber(6, 7) << endl;
-    // cout << b.moveRobber(10, 7) << endl;
-    cout << b.printBoardState();
-}

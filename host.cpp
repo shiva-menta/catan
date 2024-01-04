@@ -58,7 +58,7 @@ bool handleCommand(Game* game, int player, vector<string> args, bool firstTurn) 
         } else if (command == "settlement") {
             return game->placeSettlement(player, arg1, arg2, firstTurn);
         } else if (command == "city") {
-            return game->placeCity(player, arg1, arg2);
+            return game->upgradeSettlement(player, arg1, arg2);
         } else if (command == "robber") {
             return game->moveRobber(player, arg1, arg2, firstTurn);
         } else if (command == "knight") {
