@@ -1,5 +1,4 @@
 #include <string>
-#include <list>
 #include <map>
 #include <algorithm>
 #include <random>
@@ -195,7 +194,7 @@ ostream& operator<<(ostream& ostrm, RoadJunction &road) {
 
 class Board {
     vector<vector<Tile>> tileGrid;
-    unordered_map<int, list<Tile*>> rollTileLists;
+    unordered_map<int, vector<Tile*>> rollTileLists;
     vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
     unsigned seed = 0;
     int numTiles {19};
@@ -203,37 +202,6 @@ class Board {
     Tile* robberTile;
 
     public:
-        string formatNumber(int num) {
-            string numStr = to_string(num);
-            if (numStr.size() == 2) {
-                return " " + numStr;
-            } else {
-                return " " + numStr + " ";
-            }
-        }
-
-        shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos) {
-            Tile& tile = tileGrid[row][col];
-            return tile.getSettlements()[pos];
-        }
-
-        HexPos getOppositePos(HexPos pos) {
-            int posInt = static_cast<int>(pos);
-            int oppositeInt = (posInt + 3) % 6;
-            return static_cast<HexPos>(oppositeInt);
-        }
-
-        void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2, HexPos pos) {
-            HexPos oppositePos = getOppositePos(pos);
-            vector<shared_ptr<RoadJunction>>& roads1 = s1->getRoads();
-            if (roads1[pos] == nullptr) {
-                shared_ptr<RoadJunction> newRoad = make_shared<RoadJunction>(s1, s2, static_cast<int>(pos) % 3);
-                vector<shared_ptr<RoadJunction>>& roads2 = s2->getRoads();
-                roads1[pos] = shared_ptr<RoadJunction>(newRoad);
-                roads2[oppositePos] = shared_ptr<RoadJunction>(newRoad);
-            }
-        }
-    
         Board() : tileGrid {vector<vector<Tile>>(5)}, pieceGrid {vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>>(11, vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>(21, monostate{}))} {
             // Initialize Tile Value Stacks.
             map<Resource, int> resourceTiles = {
@@ -425,6 +393,37 @@ class Board {
             }
         }
 
+        string formatNumber(int num) {
+            string numStr = to_string(num);
+            if (numStr.size() == 2) {
+                return " " + numStr;
+            } else {
+                return " " + numStr + " ";
+            }
+        }
+
+        shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos) {
+            Tile& tile = tileGrid[row][col];
+            return tile.getSettlements()[pos];
+        }
+
+        HexPos getOppositePos(HexPos pos) {
+            int posInt = static_cast<int>(pos);
+            int oppositeInt = (posInt + 3) % 6;
+            return static_cast<HexPos>(oppositeInt);
+        }
+
+        void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2, HexPos pos) {
+            HexPos oppositePos = getOppositePos(pos);
+            vector<shared_ptr<RoadJunction>>& roads1 = s1->getRoads();
+            if (roads1[pos] == nullptr) {
+                shared_ptr<RoadJunction> newRoad = make_shared<RoadJunction>(s1, s2, static_cast<int>(pos) % 3);
+                vector<shared_ptr<RoadJunction>>& roads2 = s2->getRoads();
+                roads1[pos] = shared_ptr<RoadJunction>(newRoad);
+                roads2[oppositePos] = shared_ptr<RoadJunction>(newRoad);
+            }
+        }
+
         int getLongestRoadUser() {
             return -1;
         }
@@ -565,7 +564,7 @@ class Board {
 
         unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll) {
             unordered_map<int, unordered_map<Resource, int>> playerCounts;
-            list<Tile*>& rollList = rollTileLists[roll];
+            vector<Tile*>& rollList = rollTileLists[roll];
 
             for (Tile* tile : rollList) {
                 Resource resource = tile->getResource();

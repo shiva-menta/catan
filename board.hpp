@@ -2,23 +2,22 @@
 #define BOARD_H
 
 #include <string>
-#include <list>
 #include <map>
 #include <algorithm>
 #include <random>
 #include <unordered_set>
+#include <iostream>
+#include <sstream>
 #include "defs.hpp"
 
-using namespace std;
-
 enum HexPos {Top, TopRight, BottomRight, Bottom, BottomLeft, TopLeft};
-const vector<string> roadChars {"|", "/", "\\"};
+const std::vector<std::string> roadChars {"|", "/", "\\"};
 
 class SettlementJunction;
 
 class RoadJunction {
     int player;
-    vector<shared_ptr<SettlementJunction>> settlements;
+    std::vector<std::shared_ptr<SettlementJunction>> settlements;
     int display;
 
     public:
@@ -28,13 +27,13 @@ class RoadJunction {
         bool hasRoad();
         bool placeRoad(int playerArg);
         bool removeRoad();
-        vector<shared_ptr<SettlementJunction>>& getSettlements();
+        std::vector<std::shared_ptr<SettlementJunction>>& getSettlements();
 };
 
 class SettlementJunction {
     int player;
     int type;
-    unordered_set<shared_ptr<RoadJunction>> roads;
+    std::vector<std::shared_ptr<RoadJunction>> roads;
 
     public:
         SettlementJunction();
@@ -44,14 +43,14 @@ class SettlementJunction {
         bool placeSettlement(int playerArg);
         bool upgradeSettlement(int playerArg);
         bool hasEmptyRoads();
-        unordered_set<shared_ptr<RoadJunction>>& getRoads();
+        std::unordered_set<std::shared_ptr<RoadJunction>>& getRoads();
         RoadJunction* getRoad(HexPos pos);
 };
 
 class Tile {
     Resource resource;
     int roll;
-    vector<shared_ptr<SettlementJunction>> settlements;
+    std::vector<std::shared_ptr<SettlementJunction>> settlements;
     bool hasRobberVal;
 
     public:
@@ -61,37 +60,37 @@ class Tile {
         bool hasRobber();
         bool removeRobber();
         bool placeRobber();
-        vector<shared_ptr<SettlementJunction>>& getSettlements();
+        std::vector<std::shared_ptr<SettlementJunction>>& getSettlements();
         SettlementJunction* getSettlement(HexPos pos);
 };
 
-ostream& operator<<(ostream& ostrm, Tile &tile);
-ostream& operator<<(ostream& ostrm, SettlementJunction &settlement);
-ostream& operator<<(ostream& ostrm, RoadJunction &road);
+std::ostream& operator<<(std::ostream& ostrm, Tile &tile);
+std::ostream& operator<<(std::ostream& ostrm, SettlementJunction &settlement);
+std::ostream& operator<<(std::ostream& ostrm, RoadJunction &road);
 
 class Board {
-    vector<vector<Tile>> tileGrid;
-    unordered_map<int, list<Tile*>> rollTileLists;
-    vector<vector<variant<monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
+    std::vector<std::vector<Tile>> tileGrid;
+    std::unordered_map<int, std::vector<Tile*>> rollTileLists;
+    std::vector<std::vector<std::variant<std::monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
     unsigned seed;
     int numTiles;
-    const vector<int> rowLengths;
+    const std::vector<int> rowLengths;
     Tile* robberTile;
 
     public:
-        string formatNumber(int num);
-        shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos);
-        HexPos getOppositePos(HexPos pos);
-        void makeRoad(shared_ptr<SettlementJunction> s1, shared_ptr<SettlementJunction> s2);
         Board();
+        std::string formatNumber(int num);
+        std::shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos);
+        HexPos getOppositePos(HexPos pos);
+        void makeRoad(std::shared_ptr<SettlementJunction> s1, std::shared_ptr<SettlementJunction> s2);
         int getLongestRoadUser();
-        string printBoardState();
+        std::string printBoardState();
         bool moveRobber(int row, int col);
         bool placeRoad(int row, int col, int player, bool firstTurn);
         bool removeRoad(int row, int col);
         bool placeSettlement(int row, int col, int player, bool firstTurn);
         bool upgradeSettlement(int row, int col, int player);
-        unordered_map<int, unordered_map<Resource, int>> rollToResourceCounts(int roll);
+        std::unordered_map<int, std::unordered_map<Resource, int>> rollToResourceCounts(int roll);
 };
 
 #endif

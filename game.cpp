@@ -4,8 +4,8 @@
 #include <random>
 #include <iostream>
 #include <sstream>
-#include "defs.hpp"
 #include "board.hpp"
+#include "defs.hpp"
 
 using namespace std;
 
@@ -17,15 +17,15 @@ const int printWidth = 6;
 
 class Game {
     // Game State
-    bool isActive;
-    int turnCount;
+    bool isActive = false;
+    int turnCount = 0;
     unsigned seed = 0;
 
     // Board State
     Board board;
     
     // Player State
-    int playerCount;
+    int playerCount = 0;
     vector<int> playerScores;
     vector<unordered_map<BuildingResource, int>> playerBuildingResources;
     vector<int> playerOrder;
@@ -43,7 +43,7 @@ class Game {
     unordered_map<int, int> knightCount;
 
     public:
-        Game();
+        Game() : board {Board()} {}
 
         int addUser() {
             if (isActive) {

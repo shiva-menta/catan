@@ -3,10 +3,12 @@
 
 #include <string>
 #include <unordered_map>
-#include "defs.hpp"
+#include <algorithm>
+#include <random>
+#include <iostream>
+#include <sstream>
 #include "board.hpp"
-
-using namespace std;
+#include "defs.hpp"
 
 enum BuildingResource {Town, City, Road};
 
@@ -42,9 +44,8 @@ class Game {
     unordered_map<int, int> knightCount;
 
     public:
-        // Initialize board resources.
         Game();
-
+        
         // Add user to the current game if active.
         int addUser();
 
