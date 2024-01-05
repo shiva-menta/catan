@@ -1,18 +1,5 @@
 #include "host.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <thread>
-#include <unordered_set>
-#include <mutex>
-#include <condition_variable>
-#include "game.hpp"
-
 using namespace std;
 
 bool isInteger(const string &str) {
@@ -40,11 +27,13 @@ string blockingReceive(int sock) {
 
     int bytesReceived = recv(sock, buffer, sizeof(buffer), 0);
     if (bytesReceived == -1) {
-        std::cerr << "Error in recv()." << endl;
+        cerr << "Error in recv()." << endl;
     } else if (bytesReceived == 0) {
-        std::cout << "Connection closed by the server." << endl;
+        cout << "Connection closed by the server." << endl;
     } else {
-        return string(buffer, bytesReceived);
+        string message = string(buffer, bytesReceived);
+        cout << "Message received: " << message << endl;
+        return message;
     }
 
     return "";
@@ -130,12 +119,35 @@ void handlePlayerThread(int sock, int playerArg, bool* waitingForPlayers, bool* 
         string message = blockingReceive(sock);
         if (!message.empty()) {
             if (*waitingForPlayers && message == "start") {
+                cout << "Ending loading." << endl;
                 *waitingForPlayers = false;
+                cv.notify_one();
             } else {
                 moveQueue->push(pair<int, string> {player, message});
             }
         } else {
             return;
+        }
+    }
+    return;
+}
+
+void handleConnectionsThread(int server_fd, sockaddr_in* address, vector<pair<int, int>>* sockAddrs, Game* game, bool* waitingForPlayers, bool* isSessionActive, blockingQueue<pair<int, string>>* moveQueue) {
+    int addrlen = sizeof(*address);
+    while (*isSessionActive && *waitingForPlayers) {
+        int sock = accept(server_fd, (struct sockaddr *)address, (socklen_t*)&addrlen);
+        if (sock < 0) {
+            cerr << "Accept failed" << endl;
+            close(server_fd);
+            continue;
+        }
+        int userNum = game->addUser();
+        if (userNum != -1) {
+            cout << "Connection Accepted. Player: " << userNum << endl;
+            sockAddrs->push_back(pair<int, int> {userNum, sock});
+            thread(handlePlayerThread, sock, userNum, waitingForPlayers, isSessionActive, moveQueue).detach();
+        } else {
+            cout << "Connection Rejected." << endl;
         }
     }
     return;
@@ -147,7 +159,7 @@ void broadcastNewBoards(Game* game, vector<pair<int, int>>& sockPairs) {
         int player = sockPair.first, sock = sockPair.second;
         string board = game->printGameState(player);
         int boardSize = board.size();
-        thread([board,boardSize](int sock){ write(sock, board.c_str(), boardSize);}, sock);
+        thread([board,boardSize](int sock){ write(sock, board.c_str(), boardSize); return; }, sock); // this return might not be necessary
     }
 }
 
@@ -168,42 +180,57 @@ int main(int argc, char** argv) {
     int server_fd;
     struct sockaddr_in address;
     int opt = 1;
-    int addrlen = sizeof(address);
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        cerr << "Failed to create socket." << endl;
+        close(server_fd);
+        return -1;
+    }
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        cerr << "Can't set sock opt." << endl;
+        return -1;
+    }
 
     // Bind to Port
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
-    bind(server_fd, (struct sockaddr *)&address, sizeof(address));
+    if (::bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+        cerr << "Failed to bind socket." << endl;
+        close(server_fd);
+        return -1;
+    }
+    cout << "Binded" << endl;
 
     // Listen For Connections
-    listen(server_fd, 4);
+    if (listen(server_fd, 4) < 0) {
+        cerr << "Could not listen." << endl;
+        close(server_fd);
+        return -1;
+    }
+    cout << "Listening" << endl;
 
     // Initiate Game Logic
     Game game {};
     blockingQueue<pair<int, string>> moveQueue;
 
     // Accept New Connections Thread
-    vector<thread> threads;
     bool isSessionActive = true;
     bool waitingForPlayers = true;
     vector<pair<int, int>> sockAddrs;
 
-    while (waitingForPlayers) {
-        int sock = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
-        if (sock < 0) {
-            cerr << "Accept failed" << std::endl;
-            continue;
-        }
-        int userNum = game.addUser();
-        sockAddrs.push_back(pair<int, int> {userNum, sock});
-        threads.emplace_back(thread(handlePlayerThread, sock, userNum, &waitingForPlayers, &isSessionActive, &moveQueue));
-    }
+    // Launch New Connections Thread & Wait Until Start Message Received
+    thread connectionsThread(handleConnectionsThread, server_fd, &address, &sockAddrs, &game, &waitingForPlayers, &isSessionActive, &moveQueue);
+    unique_lock<mutex> lock(cv_m);
+    cv.wait(lock, [&]{ return !waitingForPlayers; });
+
+    // Start Game
     game.startGame();
+    cout << "Game starting." << endl;
 
     // Handle Game Turns
     // First Turn
+    broadcastNewBoards(&game, sockAddrs);
     vector<int> playerOrder = game.getPlayerOrder();
     vector<int> extendedPlayerOrder(playerOrder.size() * 2);
     copy(playerOrder.begin(), playerOrder.end(), extendedPlayerOrder.begin());
@@ -273,9 +300,7 @@ int main(int argc, char** argv) {
     }
 
     // Close Socket & Terminate
-    for (int i = 0; i < threads.size(); i++) {
-        threads[i].join();
-    }
+    connectionsThread.join();
     close(server_fd);
     return 0;
 }

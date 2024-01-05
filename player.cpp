@@ -91,6 +91,7 @@ int main(int argc, char** argv) {
         if (write(sock, input.c_str(), dataSize) == -1) {
             cerr << "Error sending message.";
         }
+        cout << "Sent message: " << input << endl;
     }
 
     // Close Socket & Terminate
