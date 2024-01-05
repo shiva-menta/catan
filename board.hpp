@@ -16,12 +16,12 @@ const std::vector<std::string> roadChars {"|", "/", "\\"};
 class SettlementJunction;
 
 class RoadJunction {
-    int player;
+    int player = -1;
     std::vector<std::shared_ptr<SettlementJunction>> settlements;
     int display;
 
     public:
-        RoadJunction();
+        RoadJunction(std::shared_ptr<SettlementJunction> s1, std::shared_ptr<SettlementJunction> s2, int hex);
         int getPlayer();
         int getDisplay();
         bool hasRoad();
@@ -31,8 +31,8 @@ class RoadJunction {
 };
 
 class SettlementJunction {
-    int player;
-    int type;
+    int player = -1;
+    int type = -1;
     std::vector<std::shared_ptr<RoadJunction>> roads;
 
     public:
@@ -43,7 +43,7 @@ class SettlementJunction {
         bool placeSettlement(int playerArg);
         bool upgradeSettlement(int playerArg);
         bool hasEmptyRoads();
-        std::unordered_set<std::shared_ptr<RoadJunction>>& getRoads();
+        std::vector<std::shared_ptr<RoadJunction>>& getRoads();
         RoadJunction* getRoad(HexPos pos);
 };
 
@@ -72,16 +72,17 @@ class Board {
     std::vector<std::vector<Tile>> tileGrid;
     std::unordered_map<int, std::vector<Tile*>> rollTileLists;
     std::vector<std::vector<std::variant<std::monostate, Tile*, SettlementJunction*, RoadJunction*>>> pieceGrid;
-    unsigned seed;
-    int numTiles;
-    const std::vector<int> rowLengths;
+    unsigned seed = 0;
+    int numTiles {19};
+    const std::vector<int> rowLengths {3,4,5,4,3};
     Tile* robberTile;
 
     public:
+        Board();
         std::string formatNumber(int num);
         std::shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos);
         HexPos getOppositePos(HexPos pos);
-        void makeRoad(std::shared_ptr<SettlementJunction> s1, std::shared_ptr<SettlementJunction> s2);
+        void makeRoad(std::shared_ptr<SettlementJunction> s1, std::shared_ptr<SettlementJunction> s2, HexPos pos);
         int getLongestRoadUser();
         std::string printBoardState();
         bool moveRobber(int row, int col);

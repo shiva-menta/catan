@@ -19,14 +19,14 @@ const int printWidth = 6;
 class Game {
     // Game State
     bool isActive;
-    int turnCount;
-    unsigned seed;
+    int turnCount = 0;
+    unsigned seed = 0;
 
     // Board State
     Board board;
     
     // Player State
-    int playerCount;
+    int playerCount = 0;
     std::vector<int> playerScores;
     std::vector<std::unordered_map<BuildingResource, int>> playerBuildingResources;
     std::vector<int> playerOrder;
@@ -44,6 +44,8 @@ class Game {
     std::unordered_map<int, int> knightCount;
 
     public:
+        Game();
+        
         // Add user to the current game if active.
         int addUser();
 
