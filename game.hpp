@@ -80,6 +80,7 @@ class Game {
         // Discard Cards
         std::vector<bool> playersUnderLimit();
         bool discardCardsOverLimit(int player, std::unordered_map<Resource, int> cards);
+        bool bankTrade(int player, Resource res1, Resource res2);
 
         // Handle Roll Dice
         int rollDice();

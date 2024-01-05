@@ -56,34 +56,35 @@ pair<string, string> splitFirstTwoTerms(const string& str) {
 // make more efficient – can convert to hashing and O(1) switch statements, code can also look better by grouping parsing
 bool handleCommand(Game* game, int player, vector<string> args, bool firstTurn) {
     string command = args[0];
+    bool result = false;
     int numArgs = args.size() - 1;
 
     if (integerCommands.count(command) && all_of(next(args.begin()), args.end(), isInteger) && numArgs == 2) {
         int arg1 = stoi(args[1]), arg2 = stoi(args[2]);
         if (command == "road") {
-            return game->placeRoad(player, arg1, arg2, firstTurn);
+            result = game->placeRoad(player, arg1, arg2, firstTurn);
         } else if (command == "settlement") {
-            return game->placeSettlement(player, arg1, arg2, firstTurn);
+            result = game->placeSettlement(player, arg1, arg2, firstTurn);
         } else if (command == "city") {
-            return game->upgradeSettlement(player, arg1, arg2);
+            result = game->upgradeSettlement(player, arg1, arg2);
         } else if (command == "robber") {
-            return game->moveRobber(player, arg1, arg2, firstTurn);
+            result = game->moveRobber(player, arg1, arg2, firstTurn);
         } else if (command == "knight") {
-            return game->useKnight(player, arg1, arg2);
+            result = game->useKnight(player, arg1, arg2);
         }
     } else if (stringCommands.count(command)) {
         if (command == "buyDev" && numArgs == 0) {
-            return game->buyDevelopmentCard(player);
+            result = game->buyDevelopmentCard(player);
         } else if (command == "monopoly" && numArgs == 1) {
             Resource res = parseResource(args[1]);
             if (res != Resource::Sand) {
-                return game->useMonopoly(player, res);
+                result = game->useMonopoly(player, res);
             }
         } else if (command == "yearofplenty" && numArgs == 2) {
             Resource res1 = parseResource(args[1]);
             Resource res2 = parseResource(args[2]);
             if (res1 != Resource::Sand && res2 != Resource::Sand) {
-                return game->useYearOfPlenty(player, res1, res2);
+                result = game->useYearOfPlenty(player, res1, res2);
             }
         } else if (command == "discard") {
             unordered_map<Resource, int> discards;
@@ -94,11 +95,18 @@ bool handleCommand(Game* game, int player, vector<string> args, bool firstTurn) 
                     discards[res] = stoi(splitTerms.second);
                 }
             }
-            return game->discardCardsOverLimit(player, discards);
+            result = game->discardCardsOverLimit(player, discards);
+        } else if (command == "trade") {
+            Resource res1 = parseResource(args[1]);
+            Resource res2 = parseResource(args[2]);
+            if (res1 != Resource::Sand && res2 != Resource::Sand) {
+                result = game->bankTrade(player, res1, res2);
+            }
         }
     }
      
-    return false;
+    cout << "Called handle command. Result: " << result << endl;
+    return result;
 }
 
 void untilValid(Game* game, blockingQueue<pair<int, string>>* moveQueue, int player, string command, bool firstTurn) {
@@ -153,13 +161,15 @@ void handleConnectionsThread(int server_fd, sockaddr_in* address, vector<pair<in
     return;
 }
 
-void broadcastNewBoards(Game* game, vector<pair<int, int>>& sockPairs) {
+void broadcastNewBoards(Game* game, vector<pair<int, int>>& sockPairs, int rollNum, int playerNum) {
     // Not sure if threads can be left detached
     for (const auto& sockPair : sockPairs) {
         int player = sockPair.first, sock = sockPair.second;
-        string board = game->printGameState(player);
+        string turn = "Turn – Player " + to_string(playerNum);
+        string roll = rollNum == -1 ? "" : "     Roll: " + to_string(rollNum);
+        string board = game->printGameState(player) + "\n\n" + turn + roll + "\n";
         int boardSize = board.size();
-        thread([board,boardSize](int sock){ write(sock, board.c_str(), boardSize); return; }, sock); // this return might not be necessary
+        thread([board,boardSize](int sock){ write(sock, board.c_str(), boardSize); return; }, sock).detach();
     }
 }
 
@@ -230,17 +240,19 @@ int main(int argc, char** argv) {
 
     // Handle Game Turns
     // First Turn
-    broadcastNewBoards(&game, sockAddrs);
     vector<int> playerOrder = game.getPlayerOrder();
     vector<int> extendedPlayerOrder(playerOrder.size() * 2);
     copy(playerOrder.begin(), playerOrder.end(), extendedPlayerOrder.begin());
     reverse_copy(playerOrder.begin(), playerOrder.end(), extendedPlayerOrder.begin() + playerOrder.size());
 
     for (auto player : extendedPlayerOrder) {
+        broadcastNewBoards(&game, sockAddrs, -1, player);
         // Wait Until Valid Place Settlement
         untilValid(&game, &moveQueue, player, "settlement", true);
+        broadcastNewBoards(&game, sockAddrs, -1, player);
         // Wait Until Valid Place Road
         untilValid(&game, &moveQueue, player, "road", true);
+        broadcastNewBoards(&game, sockAddrs, -1, player);
     }
 
     // Subsequent Turns
@@ -250,10 +262,13 @@ int main(int argc, char** argv) {
         int player = game.currentTurnPlayer();
         int roll = game.rollDice();
 
+        broadcastNewBoards(&game, sockAddrs, roll, player);
+
         // Handle Dice Roll 7 Special Case
         if (roll == 7) {
             // Wait Until Valid Move Robber
             untilValid(&game, &moveQueue, player, "robber", true);
+            broadcastNewBoards(&game, sockAddrs, roll, player);
             // Wait Until Valid Remove Cards from All Players
             vector<bool> hasDiscarded = game.playersUnderLimit();
 
@@ -267,6 +282,10 @@ int main(int argc, char** argv) {
                     hasDiscarded[player] = true;
                 }
             }
+            broadcastNewBoards(&game, sockAddrs, roll, player);
+        } else {
+            game.updateResourceCountsFromRoll(roll);
+            broadcastNewBoards(&game, sockAddrs, roll, player);
         }
 
         // Handle Normal Commands
@@ -277,7 +296,9 @@ int main(int argc, char** argv) {
                 if (args.size() > 0 && args[0] == "done") {
                     break;
                 }
-                handleCommand(&game, player, args, false);
+                if (handleCommand(&game, player, args, false)) {
+                    broadcastNewBoards(&game, sockAddrs, roll, player);
+                };
             }
         }
         
@@ -297,6 +318,7 @@ int main(int argc, char** argv) {
 
         // Increment Turn
         game.nextTurn();
+        broadcastNewBoards(&game, sockAddrs, roll, player);
     }
 
     // Close Socket & Terminate

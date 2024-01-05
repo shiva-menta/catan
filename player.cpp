@@ -10,13 +10,13 @@
 using namespace std;
 
 void processServerMessage(string message) {
-    system("clear");
+    cout << string(20, '\n');
     cout << message << endl;
     return;
 }
 
 string blockingReceive(int sock) {
-    char buffer[1024];
+    char buffer[2048];
     memset(buffer, 0, sizeof(buffer));
 
     int bytesReceived = recv(sock, buffer, sizeof(buffer), 0);

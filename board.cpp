@@ -493,6 +493,40 @@ bool Board::placeSettlement(int row, int col, int player, bool firstTurn) {
     return false;
 }
 
+vector<Resource> Board::getStartingResources(int row, int col) {
+    vector<Resource> resources;
+    if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
+        SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);
+
+        // (bad logic) – generate placements based on row / col positions
+        bool hasUpRoad = (row - 2 >= 0) && holds_alternative<RoadJunction*>(pieceGrid[row - 2][col - 1]);
+        bool hasUpSettlement = (row - 2 >= 0) && holds_alternative<SettlementJunction*>(pieceGrid[row - 2][col - 1]);
+        bool hasDownRoad = (row < 11) && holds_alternative<RoadJunction*>(pieceGrid[row][col - 1]);
+        bool hasDownSettlement = (row < 11) && holds_alternative<SettlementJunction*>(pieceGrid[row][col - 1]);
+
+        vector<pair<int, int>> settlementCoordinates {};
+        if (hasUpRoad || hasDownSettlement) {
+            // upside down triangle formation
+            settlementCoordinates.push_back(pair<int, int> {row, col - 1});
+            settlementCoordinates.push_back(pair<int, int> {row - 2, col - 3});
+            settlementCoordinates.push_back(pair<int, int> {row - 2, col + 1});
+        } else {
+            // normal triangle formation
+            settlementCoordinates.push_back(pair<int, int> {row - 2, col - 1});
+            settlementCoordinates.push_back(pair<int, int> {row, col - 3});
+            settlementCoordinates.push_back(pair<int, int> {row, col + 1});
+        }
+
+        for (auto const& pair : settlementCoordinates) {
+            int nRow = pair.first, nCol = pair.second;
+            if (0 <= nRow && nRow < 11 && 0 <= nCol && nCol < 21 && holds_alternative<Tile*>(pieceGrid[nRow][nCol])) {
+                resources.push_back(get<Tile*>(pieceGrid[nRow][nCol])->getResource());
+            }
+        }
+    }
+    return resources;
+}
+
 bool Board::upgradeSettlement(int row, int col, int player) {
     if (holds_alternative<SettlementJunction*>(pieceGrid[row - 1][col - 1])) {
         SettlementJunction& settlement = *get<SettlementJunction*>(pieceGrid[row - 1][col - 1]);

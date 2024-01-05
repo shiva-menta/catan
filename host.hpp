@@ -15,7 +15,7 @@
 #include "game.hpp"
 
 const std::unordered_set<std::string> integerCommands {"road", "settlement", "city", "robber", "knight"};
-const std::unordered_set<std::string> stringCommands {"buyDev", "monopoly", "yearofplenty", "discard"};
+const std::unordered_set<std::string> stringCommands {"buyDev", "monopoly", "yearofplenty", "discard", "trade"};
 std::condition_variable cv;
 std::mutex cv_m;
 
@@ -27,7 +27,7 @@ bool handleCommand(Game* game, int player, std::vector<std::string> args, bool f
 void untilValid(Game* game, blockingQueue<std::pair<int, std::string>>* moveQueue, int player, std::string command, bool firstTurn);
 void handlePlayerThread(int sock, int playerArg, bool* waitingForPlayers, bool* isSessionActive, blockingQueue<std::pair<int, std::string>>* moveQueue);
 void handleConnectionsThread(int server_fd, sockaddr_in* address, std::vector<std::pair<int, int>>* sockAddrs, Game* game, bool* waitingForPlayers, bool* isSessionActive, blockingQueue<std::pair<int, std::string>>* moveQueue);
-void broadcastNewBoards(Game* game, std::vector<std::pair<int, int>>& sockPairs);
+void broadcastNewBoards(Game* game, std::vector<std::pair<int, int>>& sockPairs, int rollNum, int playerNum);
 int main(int argc, char** argv);
 
 #endif

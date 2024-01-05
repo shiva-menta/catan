@@ -51,6 +51,9 @@ void Game::startGame() {
     playerOrder = vector<int>(playerCount);
     iota(playerOrder.begin(), playerOrder.end(), 0);
     shuffle(playerOrder.begin(), playerOrder.end(), default_random_engine(seed));
+
+    makeResourceCards(19);
+    makeDevelopmentCards();
 }
 
 bool Game::hasResources(int player, unordered_map<Resource, int> res) {
@@ -72,10 +75,12 @@ bool Game::placeRoad(int player, int row, int col, bool firstTurn) {
         {Resource::Brick, 1},
         {Resource::Tree, 1}
     };
-    bool resourcesValid = hasResources(player, roadResources);
+    bool resourcesValid = hasResources(player, roadResources) || firstTurn;
     if (playerBuildingResources[player][BuildingResource::Road] > 0 && resourcesValid) {
         if (board.placeRoad(row, col, player, firstTurn)) {
-            useResources(player, roadResources);
+            if (!firstTurn) {
+                useResources(player, roadResources);
+            }
             return true;
         }
     }
@@ -89,10 +94,18 @@ bool Game::placeSettlement(int player, int row, int col, bool firstTurn) {
         {Resource::Wheat, 1},
         {Resource::Sheep, 1}
     };
-    bool resourcesValid = hasResources(player, settlementResources);
+    bool resourcesValid = hasResources(player, settlementResources) || firstTurn;
     if (playerBuildingResources[player][BuildingResource::Town] > 0 && resourcesValid) {
         if (board.placeSettlement(row, col, player, firstTurn)) {
-            useResources(player, settlementResources);
+            if (!firstTurn) {
+                useResources(player, settlementResources);
+            } else {
+                vector<Resource> startingResources = board.getStartingResources(row, col);
+                for (auto resource : startingResources) {
+                    playerResourceCards[player][resource]++;
+                    resourceCards[resource]--;
+                }
+            }
             playerScores[player]++;
             return true;
         }
@@ -128,6 +141,7 @@ bool Game::buyDevelopmentCard(int player) {
         DevelopmentCard dev = developmentCards.back();
         developmentCards.pop_back();
         playerDevelopmentCards[player][dev]++;
+        return true;
     }
     return false;
 }
@@ -172,6 +186,18 @@ bool Game::discardCardsOverLimit(int player, unordered_map<Resource, int> discar
     }
     return false;
 };
+
+bool Game::bankTrade(int player, Resource res1, Resource res2) {
+    if (playerResourceCards[player][res1] >= 4 && resourceCards[res2] > 0) {
+        playerResourceCards[player][res1]-=4;
+        resourceCards[res1]+=4;
+        resourceCards[res2]--;
+        playerResourceCards[player][res2]++;
+
+        return true;
+    }
+    return false;
+}
 
 int Game::rollDice() {
     return (rand() % 6) + (rand() % 6) + 2;
@@ -261,7 +287,8 @@ int Game::getTurn() {
 
 string Game::getPaddedInt(int valArg) {
     string val = to_string(valArg);
-    return val + string(' ', printWidth - val.size());
+    string padding = string(printWidth - val.size(), ' ');
+    return val + padding;
 }
 
 string Game::printGameState(int playerView) {
@@ -270,8 +297,8 @@ string Game::printGameState(int playerView) {
     output << "\n";
 
     // All Player Summaries
-    output << "P.   " << "Score  " << "Res.   " << "Dev.   " << "\n";
-    output << string('-', 10) << "\n";
+    output << "P.    " << "Score " << "Res.  " << "Dev.  " << "\n";
+    output << "----------" << "\n";
     for (int i = 0; i < playerCount; i++) {
         string player = getPaddedInt(i);
 
@@ -293,8 +320,8 @@ string Game::printGameState(int playerView) {
     output << "\n";
 
     // My Information Summary (score resource cards type, dev cards type, building materials)
-    output << "My Information" << "\n";
-    output << string('-', 5) << "\n";
+    output << "My Information (Player " << playerView << ")\n";
+    output << "-----" << "\n";
     // Score
     int modScore = playerScores[playerView] + playerDevelopmentCards[playerView][DevelopmentCard::VictoryPoint];
     output << "Score - " << modScore << "\n";
@@ -319,6 +346,15 @@ string Game::printGameState(int playerView) {
     output << " Town: x" << playerBuildingResources[playerView][BuildingResource::Town];
     output << " City: x" << playerBuildingResources[playerView][BuildingResource::City];
     output << " Road: x" << playerBuildingResources[playerView][BuildingResource::Road];
+
+    output << "\n\n";
+    output << "Bank Resources -";
+    output << " Brick: x" << resourceCards[Resource::Brick];
+    output << " Tree: x" << resourceCards[Resource::Tree];
+    output << " Wheat: x" << resourceCards[Resource::Wheat];
+    output << " Sheep: x" << resourceCards[Resource::Sheep];
+    output << " Ore: x" << resourceCards[Resource::Ore] << "\n";
+    output << "DevCards - " << developmentCards.size();
 
     return boardStr + output.str();
 }

@@ -89,6 +89,7 @@ class Board {
         bool placeRoad(int row, int col, int player, bool firstTurn);
         bool removeRoad(int row, int col);
         bool placeSettlement(int row, int col, int player, bool firstTurn);
+        std::vector<Resource> getStartingResources(int row, int col);
         bool upgradeSettlement(int row, int col, int player);
         std::unordered_map<int, std::unordered_map<Resource, int>> rollToResourceCounts(int roll);
 };
