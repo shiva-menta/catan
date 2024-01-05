@@ -1,3 +1,5 @@
+#include "host.hpp"
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -10,12 +12,27 @@
 #include <mutex>
 #include <condition_variable>
 #include "game.hpp"
-#include "blockingQueue.hpp"
 
 using namespace std;
 
-const unordered_set<string> integerCommands {"road", "settlement", "city", "robber", "knight"};
-const unordered_set<string> stringCommands {"buyDev", "monopoly", "yearofplenty", "discard"};
+bool isInteger(const string &str) {
+    if (str.empty() || !all_of(str.begin(), str.end(), ::isdigit)) {
+        return false;
+    };
+    return true;
+}
+
+vector<string> splitString(const string &str) {
+    vector<string> words;
+    istringstream iss(str);
+    string word;
+
+    while (iss >> word) {
+        words.push_back(word);
+    }
+
+    return words;
+}
 
 string blockingReceive(int sock) {
     char buffer[1024];
@@ -66,12 +83,8 @@ bool handleCommand(Game* game, int player, vector<string> args, bool firstTurn) 
             return game->useKnight(player, arg1, arg2);
         }
     } else if (stringCommands.count(command)) {
-        if (command == "buyDev" && numArgs == 1) {
-            int devInt = parseDevelopmentCard(args[1]);
-            if (devInt != -1) {
-                DevelopmentCard dev = static_cast<DevelopmentCard>(devInt);
-                return game->buyDevelopmentCard(player, dev);
-            }
+        if (command == "buyDev" && numArgs == 0) {
+            return game->buyDevelopmentCard(player);
         } else if (command == "monopoly" && numArgs == 1) {
             Resource res = parseResource(args[1]);
             if (res != Resource::Sand) {
@@ -99,7 +112,7 @@ bool handleCommand(Game* game, int player, vector<string> args, bool firstTurn) 
     return false;
 }
 
-void untilValid(Game* game, queue<pair<int, string>>* moveQueue, int player, string command, bool firstTurn) {
+void untilValid(Game* game, blockingQueue<pair<int, string>>* moveQueue, int player, string command, bool firstTurn) {
    while (true) {
         pair<int, string> message = moveQueue->pop();
         if (message.first == player) {
@@ -111,7 +124,7 @@ void untilValid(Game* game, queue<pair<int, string>>* moveQueue, int player, str
     }
 }
 
-void handlePlayerThread(int sock, int playerArg, bool* waitingForPlayers, bool* isSessionActive, queue<pair<int, string>>* moveQueue) {
+void handlePlayerThread(int sock, int playerArg, bool* waitingForPlayers, bool* isSessionActive, blockingQueue<pair<int, string>>* moveQueue) {
     int player = playerArg;
     while (*isSessionActive) {
         string message = blockingReceive(sock);
@@ -126,25 +139,6 @@ void handlePlayerThread(int sock, int playerArg, bool* waitingForPlayers, bool* 
         }
     }
     return;
-}
-
-bool isInteger(const string &str) {
-    if (str.empty() || !all_of(str.begin(), str.end(), ::isdigit)) {
-        return false;
-    };
-    return true;
-}
-
-vector<string> splitString(const string &str) {
-    vector<string> words;
-    istringstream iss(str);
-    string word;
-
-    while (iss >> word) {
-        words.push_back(word);
-    }
-
-    return words;
 }
 
 void broadcastNewBoards(Game* game, vector<pair<int, int>>& sockPairs) {
@@ -186,9 +180,9 @@ int main(int argc, char** argv) {
     // Listen For Connections
     listen(server_fd, 4);
 
-    // Initiate Game Logic (need to consider race conditions)
+    // Initiate Game Logic
     Game game {};
-    queue<pair<int, string>> moveQueue;
+    blockingQueue<pair<int, string>> moveQueue;
 
     // Accept New Connections Thread
     vector<thread> threads;

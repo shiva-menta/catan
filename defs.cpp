@@ -1,3 +1,5 @@
+#include "defs.hpp"
+
 #include <string>
 
 using namespace std;

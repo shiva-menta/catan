@@ -12,9 +12,9 @@
 
 enum BuildingResource {Town, City, Road};
 
-const int WIN_THRESHOLD;
-const int DISCARD_LIMIT;
-const int printWidth;
+const int WIN_THRESHOLD = 10;
+const int DISCARD_LIMIT = 7;
+const int printWidth = 6;
 
 class Game {
     // Game State
@@ -70,7 +70,7 @@ class Game {
         bool upgradeSettlement(int player, int row, int col);
 
         // Buy Development Card
-        bool buyDevelopmentCard(int player, DevelopmentCard card);
+        bool buyDevelopmentCard(int player);
 
         // Move Robber
         bool moveRobber(int player, int row, int col, bool fromDev);

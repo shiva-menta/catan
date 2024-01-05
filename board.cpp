@@ -1,3 +1,5 @@
+#include "board.hpp"
+
 #include <string>
 #include <map>
 #include <algorithm>

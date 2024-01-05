@@ -1,3 +1,5 @@
+#include "game.hpp"
+
 #include <string>
 #include <unordered_map>
 #include <algorithm>
@@ -8,12 +10,6 @@
 #include "defs.hpp"
 
 using namespace std;
-
-enum BuildingResource {Town, City, Road};
-
-const int WIN_THRESHOLD = 10;
-const int DISCARD_LIMIT = 7;
-const int printWidth = 6;
 
 class Game {
     // Game State
@@ -291,17 +287,17 @@ class Game {
             turnCount++;
         }
 
-        string getPaddedInt(int valArg) {
-            string val = to_string(valArg);
-            return val + string(' ', printWidth - val.size());
-        }
-
         int currentTurnPlayer() {
             return playerOrder[turnCount % playerCount];
         }
 
         int getTurn() {
             return turnCount;
+        }
+
+        string getPaddedInt(int valArg) {
+            string val = to_string(valArg);
+            return val + string(' ', printWidth - val.size());
         }
 
         string printGameState(int playerView) {
