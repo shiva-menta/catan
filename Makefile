@@ -2,7 +2,7 @@ objects = game.o board.o defs.o
 comp_tags = -c -g -O0 -std=c++17
 
 .PHONY: all
-all: game
+all: player host
 
 clean:
 	rm *.o game
@@ -16,9 +16,22 @@ board.o: board.cpp board.hpp
 game.o: game.cpp game.hpp
 	clang++ $(comp_tags) game.cpp
 
-game: $(objects)
-	clang++ -g -o game $(objects)
+player.o: player.cpp player.hpp
+	clang++ $(comp_tags) player.cpp
 
-.PHONY: run
-run: 
-	./game
+host.o: host.cpp host.hpp
+	clang++ $(comp_tags) host.cpp
+
+player: player.o $(objects)
+	clang++ -g -o player player.o $(objects)
+
+host: host.o $(objects)
+	clang++ -g -o host host.o $(objects)
+
+.PHONY: run player
+run player: 
+	./player
+
+.PHONY: run host
+run host: 
+	./host

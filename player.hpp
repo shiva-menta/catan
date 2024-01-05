@@ -8,12 +8,9 @@
 #include <iostream>
 #include <thread>
 
-using namespace std;
-
-void processServerMessage(string message);
-string blockingReceive(int sock);
+void processServerMessage(std::string message);
+std::string blockingReceive(int sock);
 void receiveThreadFunction(int sock, bool* sessionOngoing);
-
-int main();
+int main(int argc, char** argv);
 
 #endif

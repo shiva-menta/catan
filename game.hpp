@@ -27,25 +27,23 @@ class Game {
     
     // Player State
     int playerCount;
-    vector<int> playerScores;
-    vector<unordered_map<BuildingResource, int>> playerBuildingResources;
-    vector<int> playerOrder;
+    std::vector<int> playerScores;
+    std::vector<std::unordered_map<BuildingResource, int>> playerBuildingResources;
+    std::vector<int> playerOrder;
     
     // Resource Cards
-    unordered_map<Resource, int> resourceCards;
-    vector<unordered_map<Resource, int>> playerResourceCards;
+    std::unordered_map<Resource, int> resourceCards;
+    std::vector<std::unordered_map<Resource, int>> playerResourceCards;
 
     // Development Cards
-    vector<DevelopmentCard> developmentCards;
-    vector<unordered_map<DevelopmentCard, int>> playerDevelopmentCards;
+    std::vector<DevelopmentCard> developmentCards;
+    std::vector<std::unordered_map<DevelopmentCard, int>> playerDevelopmentCards;
 
     // Knight
     Tile* knightPos;
-    unordered_map<int, int> knightCount;
+    std::unordered_map<int, int> knightCount;
 
     public:
-        Game();
-        
         // Add user to the current game if active.
         int addUser();
 
@@ -59,8 +57,8 @@ class Game {
         void startGame();
 
         // Resource Checks
-        bool hasResources(int player, unordered_map<Resource, int> res);
-        void useResources(int player, unordered_map<Resource, int> res);
+        bool hasResources(int player, std::unordered_map<Resource, int> res);
+        void useResources(int player, std::unordered_map<Resource, int> res);
 
         // Place Road
         bool placeRoad(int player, int row, int col, bool firstTurn);
@@ -78,8 +76,8 @@ class Game {
         bool moveRobber(int player, int row, int col, bool fromDev);
 
         // Discard Cards
-        vector<bool> playersUnderLimit();
-        bool discardCardsOverLimit(int player, unordered_map<Resource, int> cards);
+        std::vector<bool> playersUnderLimit();
+        bool discardCardsOverLimit(int player, std::unordered_map<Resource, int> cards);
 
         // Handle Roll Dice
         int rollDice();
@@ -92,7 +90,7 @@ class Game {
         bool useYearOfPlenty(int player, Resource res1, Resource res2);
 
         // Decide Player Order
-        vector<int> getPlayerOrder();
+        std::vector<int> getPlayerOrder();
 
         // Check Win Condition
         bool isPlayerWinner(int player);
@@ -107,12 +105,10 @@ class Game {
         int getTurn();
 
         // Helper
-        string getPaddedInt(int valArg);
+        std::string getPaddedInt(int valArg);
 
         // Print user view.
-        string printGameState(int player);
+        std::string printGameState(int player);
 };
-
-int main();
 
 #endif

@@ -43,7 +43,7 @@ class Game {
     unordered_map<int, int> knightCount;
 
     public:
-        Game() : board {Board()} {}
+        Game() : board() {}
 
         int addUser() {
             if (isActive) {
@@ -58,8 +58,7 @@ class Game {
             });
             playerScores.push_back(0);
 
-            playerCount++;
-            return playerCount;
+            return playerCount++;
         };
 
         void makeResourceCards(int cardsPerResource) {
@@ -89,7 +88,7 @@ class Game {
 
         void startGame() {
             isActive = true;
-            vector<int> playerOrder(playerCount);
+            playerOrder = vector<int>(playerCount);
             iota(playerOrder.begin(), playerOrder.end(), 0);
             shuffle(playerOrder.begin(), playerOrder.end(), default_random_engine(seed));
         }
@@ -364,7 +363,3 @@ class Game {
             return boardStr + output.str();
         }
 };
-
-int main() {
-    Game g = Game();
-}

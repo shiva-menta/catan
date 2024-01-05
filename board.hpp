@@ -78,7 +78,6 @@ class Board {
     Tile* robberTile;
 
     public:
-        Board();
         std::string formatNumber(int num);
         std::shared_ptr<SettlementJunction> getSettlementReference(int row, int col, HexPos pos);
         HexPos getOppositePos(HexPos pos);
